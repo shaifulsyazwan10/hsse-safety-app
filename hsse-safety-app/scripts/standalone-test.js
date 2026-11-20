@@ -1,7 +1,7 @@
 const {chromium,devices}=require('playwright');const fs=require('fs');const http=require('http');const path=require('path');
 const QA=__dirname,SP=path.resolve(QA,'..');const res=[];const ok=(n,c,i='')=>{res.push(c);console.log((c?'PASS ':'FAIL ')+n+(i?' — '+i:''))};
 const page=fs.readFileSync('/home/user/hsse-safety-app/docs/index.html');
-const srv=http.createServer((q,r)=>{r.writeHead(200,{'content-type':'text/html'});r.end(page)}).listen(8766);
+const srv=http.createServer((q,r)=>{if(q.url.startsWith('/firebase-config.js')){r.writeHead(200,{'content-type':'text/javascript'});return r.end('window.HSSE_FIREBASE=null;')}r.writeHead(200,{'content-type':'text/html'});r.end(fs.readFileSync('/home/user/hsse-safety-app/docs/index.html'))}).listen(8766);
 (async()=>{const b=await chromium.launch();const ctx=await b.newContext({...devices['iPhone 13'],acceptDownloads:true});const p=await ctx.newPage();
 const errs=[];p.on('pageerror',e=>errs.push(e.message));
 await p.route(/cdnjs/,r=>r.fulfill({path:SP+'/node_modules/'+(r.request().url().includes('jspdf')?'jspdf/dist/jspdf.umd.min.js':'html2canvas/dist/html2canvas.min.js'),contentType:'text/javascript'}));

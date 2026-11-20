@@ -7,5 +7,5 @@ Claude skill for building, updating and extending the HSSE Safety Department app
 
 ## Live app
 
-- **GitHub Pages:** https://shaifulsyazwan10.github.io/hsse-safety-app/ (from `docs/index.html`). Records are saved on each phone or computer; use **Backup** / **Restore** in the app to copy them between devices.
+- **GitHub Pages + Firebase:** https://shaifulsyazwan10.github.io/hsse-safety-app/ (from `docs/index.html`). Team members sign in with email and password and share one set of records stored in Firebase. Setup: [FIREBASE-SETUP.md](FIREBASE-SETUP.md). Until `docs/firebase-config.js` is filled in, records are saved on each device (with Backup / Restore).
 - **claude.ai:** https://claude.ai/artifact/ArdGTfN88sBMYUmodk6uK1. Records are shared by the whole team (share it as Contributor from the Share menu).

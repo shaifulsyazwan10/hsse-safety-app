@@ -1,4 +1,4 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#00008B"><style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style></head><body><title>HSSE Site Audit</title>
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#00008B"><style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style><script src="firebase-config.js"></script></head><body><title>HSSE Site Audit</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
@@ -225,6 +225,7 @@ h2{font-size:20px;text-transform:uppercase;letter-spacing:.05em}
 .pdfdoc .tbbig .ph{width:340px;height:255px}
 .pdfdoc .tbbig{gap:12px}
 .notice.dev{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between}.notice.dev>div:first-child{flex:1 1 260px;min-width:0}
+.login{max-width:440px;width:100%;margin:24px auto 0}
 .chips{display:flex;flex-wrap:wrap;gap:8px}
 .chipbtn{border:1px solid var(--line);background:var(--surface-2);border-radius:999px;padding:7px 13px;font-weight:600;font-size:14px;cursor:pointer;min-height:38px}
 .chipbtn[aria-pressed="true"]{background:var(--brand);color:var(--brand-ink);border-color:var(--brand)}
@@ -262,6 +263,7 @@ h2{font-size:20px;text-transform:uppercase;letter-spacing:.05em}
   <div class="sp"></div>
   <span class="save-state" id="saveState"></span>
   <button class="btn" id="btnHome" hidden>All audits</button>
+  <button class="btn" id="btnOut" hidden>Sign out</button>
   <button class="btn primary" id="btnNew">+ New audit</button>
 </div></header>
 
@@ -420,6 +422,7 @@ const photoCache=new Map();
 
 async function initCaps(){
   const c=window.claude;
+  if((!c||!c.use)&&window.HSSE_FIREBASE&&window.HSSE_FIREBASE.apiKey){initFirebase();return}
   if(!c||!c.use){useLocal();return}
   const timer=setTimeout(()=>{if(!loaded)useLocal()},10000);
   try{ db=await c.use("db"); }catch(e){db=null}
@@ -428,6 +431,9 @@ async function initCaps(){
   c.use("assets").then(a=>assets=a).catch(()=>{});
   c.use("downloads").then(d=>downloads=d).catch(()=>{});
   c.use("user").then(async u=>{userCap=u;try{me=u?await u.id():null}catch(e){}}).catch(()=>{});
+  startShared(timer);
+}
+function startShared(timer){
   subscribeTasks();subscribeTb();
   db.collection("audits").onSnapshot(snap=>{
     clearTimeout(timer);
@@ -438,6 +444,54 @@ async function initCaps(){
     if(view==="list")keepFocus(renderList);
     else if(view==="report"&&current){const fresh=audits.get(current.id);if(fresh){current=structuredClone(fresh);renderReport()}}
   },err=>{clearTimeout(timer);if(!loaded)useLocal();else setSave("Connection lost – changes may not save","bad")});
+}
+/* ---------- Firebase (used on the GitHub Pages address) ---------- */
+let fbAuth=null,loginMsg="";
+async function initFirebase(){
+  const cfg=window.HSSE_FIREBASE;const base=cfg.sdk||"https://www.gstatic.com/firebasejs/10.12.2/";
+  $("#app").innerHTML=`<div class="empty">Connecting…</div>`;
+  try{for(const f of ["firebase-app-compat.js","firebase-auth-compat.js","firebase-firestore-compat.js"])await loadScript(base+f)}
+  catch(e){$("#app").innerHTML=`<div class="empty">Cannot reach the server. Check your internet connection and reload the page.</div>`;return}
+  firebase.initializeApp(cfg);fbAuth=firebase.auth();const fs=firebase.firestore();
+  if(cfg.emulator){fbAuth.useEmulator(cfg.emulator.auth);fs.useEmulator(cfg.emulator.host,cfg.emulator.port)}
+  else{try{await fs.enablePersistence({synchronizeTabs:true})}catch(e){}}
+  const mapErr=e=>{throw {code:e&&e.code==="permission-denied"?"invalid_argument":e&&e.code==="resource-exhausted"?"quota_exceeded":e&&e.code==="unavailable"?"unavailable":"unknown",message:e&&e.message}};
+  db={collection:c=>{const col=fs.collection(c);return {
+    doc:id=>{const d=col.doc(id);return {
+      // a write is kept on the device at once and uploads when there is signal; do not hold the screen waiting for it
+      set:x=>{const w=d.set(JSON.parse(JSON.stringify(x))).catch(mapErr);w.catch(e=>{if(e.code==="invalid_argument")toast("Your account is not allowed to save – ask the admin")});
+        return Promise.race([w,new Promise(r=>setTimeout(()=>r("pending"),4000))]).then(v=>{if(v==="pending")setSave("Saved on this device – will upload when online");return v})},
+      get:()=>d.get().catch(mapErr),
+      delete:()=>{const w=d.delete().catch(mapErr);return Promise.race([w,new Promise(r=>setTimeout(r,4000))])}}},
+    onSnapshot:(n,e)=>col.onSnapshot(n,err=>{if(err&&err.code==="permission-denied"){loginMsg="Your account does not have access to the HSSE Safety app. Ask the admin to add your email.";try{sessionStorage.setItem("hsse-login-msg",loginMsg)}catch(x){}fbAuth.signOut();return}if(e)e(err)})}}};
+  let started=false;
+  fbAuth.onAuthStateChanged(u=>{
+    $("#btnOut").hidden=!u;
+    if(!u){if(started){location.reload();return}showLogin(loginMsg);return}
+    me=u.uid;$("#btnOut").title=u.email||"";
+    document.querySelector(".tabs").hidden=false;$("#btnNew").hidden=false;
+    if(!started){started=true;mode="shared";startShared(setTimeout(()=>{if(!loaded){loaded=true;go(view)}},10000))}
+    go(location.hash==="#tasks"?"tasks":location.hash==="#tb"?"tb":"list");
+  });
+}
+function showLogin(msg){
+  if(!msg){try{msg=sessionStorage.getItem("hsse-login-msg")||"";sessionStorage.removeItem("hsse-login-msg")}catch(e){}}
+  document.querySelector(".tabs").hidden=true;$("#btnNew").hidden=true;$("#btnHome").hidden=true;$("#scorebar").hidden=true;
+  $("#app").innerHTML=`<section class="card login"><div class="card-h"><h2>Sign in</h2></div><form class="card-b" id="loginForm" novalidate><div class="grid2">
+    <div class="fld full"><label for="li_email">Email</label><input id="li_email" type="email" autocomplete="username" inputmode="email" required></div>
+    <div class="fld full"><label for="li_pw">Password</label><input id="li_pw" type="password" autocomplete="current-password" required></div>
+    <div class="fld full"><div class="warn" id="li_msg">${esc(msg||"")}</div></div>
+    <div class="toolbar"><button class="btn brand" type="submit" id="li_go">Sign in</button><button class="btn ghost" type="button" id="li_reset">Forgot password?</button></div>
+  </div></form></section>`;
+  $("#loginForm").onsubmit=async e=>{e.preventDefault();const em=$("#li_email").value.trim(),pw=$("#li_pw").value;
+    if(!em||!pw){$("#li_msg").textContent="Enter your email and password.";return}
+    $("#li_go").disabled=true;$("#li_msg").textContent="";
+    try{await fbAuth.signInWithEmailAndPassword(em,pw)}
+    catch(err){$("#li_msg").textContent=/network/.test(err.code||"")?"No internet connection. Try again when you have signal.":/too-many/.test(err.code||"")?"Too many tries. Wait a few minutes, or use Forgot password.":"Email or password is not correct."}
+    finally{const b=$("#li_go");if(b)b.disabled=false}};
+  $("#li_reset").onclick=async()=>{const em=$("#li_email").value.trim();if(!em){$("#li_msg").textContent="Type your email first, then tap Forgot password.";return}
+    try{await fbAuth.sendPasswordResetEmail(em)}catch(e){}
+    $("#li_msg").textContent="If this email has an account, a password reset link has been sent to it."};
 }
 async function useLocal(){
   if(mode==="shared"&&loaded)return;
@@ -457,9 +511,9 @@ function saveNow(){
   saveChain=saveChain.then(async()=>{
     setSave("Saving…");
     try{
-      if(mode==="shared"){await db.collection("audits").doc(snap.id).set(snap)}
+      let r;if(mode==="shared"){r=await db.collection("audits").doc(snap.id).set(snap)}
       else await IDB.set("hsse-audits",[...audits.values()]);
-      dirty=false;setSave(mode==="shared"?"All changes saved":"Saved on this device");
+      dirty=false;if(r!=="pending")setSave(mode==="shared"?"All changes saved":"Saved on this device");
     }catch(e){
       if(e&&e.code==="unavailable"){await new Promise(r=>setTimeout(r,800+Math.random()*800));
         try{await db.collection("audits").doc(snap.id).set(snap);dirty=false;setSave("All changes saved");return}catch(e2){e=e2}}
@@ -1165,9 +1219,10 @@ $("#btnNew").onclick=()=>{if(TABOF[view]==="tb"){curTb=newTb();go("tbedit");retu
   if(view==="tasks"||view==="task"){curTask=newTask();go("task");return}
   if(view==="form"&&dirty)saveNow();current=newAudit();audits.set(current.id,current);go("form");queueSave()};
 $("#btnHome").onclick=()=>go("list");
+$("#btnOut").onclick=()=>confirmBox("Sign out?","You will need your email and password to sign in again.","Sign out",async()=>{if(dirty)await saveNow();await fbAuth.signOut();location.reload()});
 window.addEventListener("beforeunload",()=>{if(dirty)saveNow()});
 document.querySelectorAll("[data-tab]").forEach(b=>b.onclick=()=>go(b.dataset.tab));
-if(location.hash==="#tasks")go("tasks");else if(location.hash==="#tb")go("tb");else go("list");
+if(!(window.HSSE_FIREBASE&&window.HSSE_FIREBASE.apiKey&&!window.claude)){if(location.hash==="#tasks")go("tasks");else if(location.hash==="#tb")go("tb");else go("list");}
 initCaps();
 </script>
 </body></html>

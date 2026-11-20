@@ -53,6 +53,10 @@ Shared database collections (`db` capability; read/write from Claude with the `A
 
 Score = Comply ÷ (Comply + Not comply); N/A and switched-off sections excluded (differs from the old Novade weighted score).
 
+## Firebase (GitHub Pages address)
+
+`docs/index.html` loads `docs/firebase-config.js`. When `window.HSSE_FIREBASE` has an `apiKey` and the page is not inside claude.ai, `initFirebase()` loads the Firebase compat SDK 10.12.2 from gstatic, shows an email/password sign-in screen, and adapts Firestore to the same `db.collection().doc().set/get/delete` + `onSnapshot` interface the app uses on claude.ai. Collections are the same (`audits`, `tasks`, `toolbox`, `photos`); photos are compressed data URLs in `photos/<id>` (no Cloud Storage, so the free Spark plan works). Writes return after 4 s even when offline ("Saved on this device – will upload when online"); offline persistence is on. Access is controlled by `firestore.rules` (email allowlist) in the repo root; setup steps for the user are in `FIREBASE-SETUP.md`. Test with `scripts/firebase-test.js` against the local emulator (`firebase emulators:start --only auth,firestore`, needs Java; create accounts through the emulator's signUp REST endpoint).
+
 ## Daily task email
 
 The user wants one email to the safety team Mon–Fri ~5:30 PM MYT summarising tasks. Recipients and the full email spec are in `references/daily-task-email.md`. A scheduled task created from a chat session could not attach the Gmail connector (org setting), so it must be created from the claude.ai scheduled-tasks UI with Gmail selected, using that file as the prompt. A disabled duplicate named "HSSE daily task update email" may exist — suggest deleting it.
