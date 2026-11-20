@@ -1,21 +1,18 @@
-// Google Drive upload test: Firebase emulator + the real Code.gs running on in-memory Drive/Sheets (gas-mock.js).
+// Google Drive upload test (GitHub address, device storage): the real Code.gs running on in-memory Drive/Sheets (gas-mock.js).
 const {chromium,devices}=require('playwright');const fs=require('fs');const http=require('http');const path=require('path');
 const QA=__dirname,SP=path.resolve(QA,'..'),NM=SP+'/node_modules/firebase/';
 const res=[];const ok=(n,c,i='')=>{res.push(!!c);console.log((c?'PASS ':'FAIL ')+n+(i?' — '+i:''))};
 const KEY=fs.readFileSync(QA+'/gas.key','utf8').trim();const GAS='http://127.0.0.1:8790/';
 const state=async()=>JSON.parse(await (await fetch(GAS+'state')).text());
 const index=fs.readFileSync('/home/user/hsse-safety-app/docs/index.html');
-const cfg=`window.HSSE_FIREBASE={apiKey:"demo",authDomain:"localhost",projectId:"demo-hsse",sdk:"/sdk/",emulator:{auth:"http://127.0.0.1:9099",host:"127.0.0.1",port:8080}};`;
-const srv=http.createServer((q,r)=>{
-  if(q.url.startsWith('/sdk/')){r.writeHead(200,{'content-type':'text/javascript'});return r.end(fs.readFileSync(NM+q.url.slice(5)))}
-  if(q.url.startsWith('/firebase-config.js')){r.writeHead(200,{'content-type':'text/javascript'});return r.end(cfg)}
-  r.writeHead(200,{'content-type':'text/html'});r.end(index)}).listen(8768);
+const srv=http.createServer((q,r)=>{r.writeHead(200,{'content-type':'text/html'});r.end(index)}).listen(8768);
 const findTab=(s,n)=>s.tabs.find(t=>t.name===n);
 const findFolder=(t,name)=>{if(t.name===name)return t;for(const k of t.kids){const f=findFolder(k,name);if(f)return f}return null};
 (async()=>{const b=await chromium.launch();const c=await b.newContext({...devices['iPhone 13']});const p=await c.newPage();const errs=[];p.on('pageerror',e=>errs.push(e.message));
+ await c.addInitScript(()=>{window.HSSE_DRIVE_TEST=true});
  await p.route(/cdnjs/,r=>r.fulfill({path:SP+'/node_modules/'+(r.request().url().includes('jspdf')?'jspdf/dist/jspdf.umd.min.js':'html2canvas/dist/html2canvas.min.js'),contentType:'text/javascript'}));
- await p.goto('http://localhost:8768/');await p.waitForSelector('#li_email');await p.fill('#li_email','shaifulsyazwan@octagonmaju.com.my');await p.fill('#li_pw','Test12345');await p.click('#li_go');
- await p.waitForSelector('#btnDrive:not([hidden])',{timeout:15000});
+ await p.goto('http://localhost:8768/');await p.waitForSelector('#btnDrive:not([hidden])',{timeout:15000});
+ ok('No sign-in screen; app opens straight away with a Drive button',!(await p.isVisible('#li_email'))&&await p.isVisible('.tabs'));
  // a task saved BEFORE Drive is set up waits in the queue
  await p.click('[data-tab="tasks"]');await p.click('#btnNew');await p.fill('#t_title','Saved before Drive setup');await p.selectOption('#t_who','Ridzuan');await p.fill('#t_due','2026-12-01');await p.click('#t_save');await p.waitForTimeout(800);
  await p.click('.task');await p.waitForTimeout(300);ok('Before setup, record shows it is waiting for Drive',(await p.textContent('.drivechip')).includes('Waiting for Google Drive setup'));await p.click('#t_cancel');
@@ -42,7 +39,7 @@ const findFolder=(t,name)=>{if(t.name===name)return t;for(const k of t.kids){con
  // audit
  await p.evaluate(async()=>{const a={id:'aud1',formId:'x',status:'closed',closedAt:new Date().toISOString(),site:'PS Karak',client:'Shell',conductedOn:'2026-11-20',work:'Canopy light',auditBy:'Masitah',engineer:'Johan',contractor:'S&F',manpower:'4',
    answers:{wah1:{v:'Y'},wah2:{v:'N',c:'Ladder not tied'}},secOn:{wah:true},sharingPhotos:[],sectionPhotos:{},updatedAt:new Date().toISOString()};
-   audits.set(a.id,a);await db.collection('audits').doc(a.id).set(a);driveSend('audit','aud1')});
+   audits.set(a.id,a);await IDB.set('hsse-audits',[...audits.values()]);driveSend('audit','aud1')});
  await p.waitForTimeout(8000);s=await state();
  const ar=findTab(s,'Site Audits').rows;const aF=findFolder(s.tree,'2026-11-20 PS Karak');
  ok('Site audit: PDF in Site Audits/2026-11 and row with score + findings',aF&&aF.files.some(f=>f.endsWith('.pdf)')||f.includes('.pdf'))&&JSON.stringify(ar).includes('Ladder not tied')&&JSON.stringify(ar).includes('50'),ar[1]&&ar[1].slice(0,12).join(' | '));
@@ -57,5 +54,12 @@ const findFolder=(t,name)=>{if(t.name===name)return t;for(const k of t.kids){con
  // send all
  await p.click('#btnDrive');await p.click('#dr_all');await p.waitForTimeout(12000);s=await state();
  ok('"Send all records" updates rows without duplicates',findTab(s,'Task Updates').rows.length===3&&findTab(s,'Site Audits').rows.length===2,`tasks rows ${findTab(s,'Task Updates').rows.length}, audit rows ${findTab(s,'Site Audits').rows.length}`);
+ // second phone, same Drive
+ const c2=await b.newContext({...devices['iPhone 13']});await c2.addInitScript(()=>{window.HSSE_DRIVE_TEST=true});const p2=await c2.newPage();await p2.goto('http://localhost:8768/');await p2.waitForSelector('#btnDrive:not([hidden])');
+ await p2.click('#btnDrive');await p2.fill('#dr_url',GAS);await p2.fill('#dr_key',KEY);await p2.click('#dr_save');
+ await p2.click('[data-tab="tasks"]');await p2.click('#btnNew');await p2.fill('#t_title','From the second phone');await p2.selectOption('#t_who','Masitah');await p2.fill('#t_due','2026-12-03');await p2.click('#t_save');await p2.waitForTimeout(3000);
+ s=await state();ok('Second phone uploads to the same Sheet',JSON.stringify(findTab(s,'Task Updates').rows).includes('From the second phone')&&JSON.stringify(findTab(s,'Task Updates').rows).includes('No signal task'));
+ await p.reload();await p.waitForTimeout(800);await p.click('[data-tab="tasks"]');await p.click('.task');await p.waitForTimeout(300);
+ ok('Drive settings and upload status stay after reopening the app',(await p.textContent('.drivechip')).includes('Saved to Google Drive'));
  ok('No script errors',errs.length===0,errs.slice(0,3).join(' | '));
  console.log(`${res.filter(Boolean).length}/${res.length} passed`);fs.writeFileSync(QA+'/drive-state.json',JSON.stringify(await state(),null,1));await b.close();srv.close()})().catch(e=>{console.error('CRASH',e);process.exit(1)});

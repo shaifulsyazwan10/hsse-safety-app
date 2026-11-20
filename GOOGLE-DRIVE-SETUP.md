@@ -1,6 +1,6 @@
 # Google Drive setup (one time, about 5 minutes)
 
-After this, every **submitted site audit**, **saved task** and **saved toolbox meeting** from the app (GitHub + Firebase address) is copied to the Google Drive of the account you use below:
+After this, every **submitted site audit**, **saved task** and **saved toolbox meeting** from the app at https://shaifulsyazwan10.github.io/hsse-safety-app/ is copied to the Google Drive of the account you use below:
 
 ```
 My Drive/
@@ -24,10 +24,12 @@ Use the Google account that should own the files, for example the HSSE departmen
    - *Who has access:* **Anyone**
 
    → **Deploy**, and copy the **Web app URL** (ends with `/exec`).
-6. In the HSSE Safety app, sign in, tap **Drive** at the top, paste the **Web app URL** and the **Drive key**, tap **Test connection**, then **Save**.
-7. Optional: tap **Send all records to Google Drive** to copy everything already in the app.
+6. On **each phone or computer** that uses the app: open the app, tap **Drive** at the top, paste the **Web app URL** and the **Drive key**, tap **Test connection**, then **Save**. The settings stay on that device.
+7. Optional: tap **Send all records to Google Drive** on a device to copy everything already saved on it.
 
-"Who has access: Anyone" only means the app can reach the script without a Google sign-in; nothing is accepted without the Drive key, and the key is stored in Firestore where only your team can read it. If the key ever leaks, run `newKey` in the script and paste the new key into the app.
+Records saved before a device is set up wait on that device and upload as soon as step 6 is done there. Records saved with no signal upload when signal returns (keep the app open for a moment once you are back online).
+
+"Who has access: Anyone" only means the app can reach the script without a Google sign-in; nothing is accepted without the Drive key. Give the key only to your team; it is kept in the app's storage on each device. If the key ever leaks, run `newKey` in the script and paste the new key into the app.
 
 **Updating the script later:** paste the new code, then *Deploy → Manage deployments → Edit (pencil) → Version: New version → Deploy*. The URL stays the same.
 

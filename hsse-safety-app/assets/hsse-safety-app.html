@@ -225,7 +225,6 @@ h2{font-size:20px;text-transform:uppercase;letter-spacing:.05em}
 .pdfdoc .tbbig .ph{width:340px;height:255px}
 .pdfdoc .tbbig{gap:12px}
 .notice.dev{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between}.notice.dev>div:first-child{flex:1 1 260px;min-width:0}
-.login{max-width:440px;width:100%;margin:24px auto 0}
 .drivechip{display:block;font-size:13px;margin-top:4px;color:var(--ink-2)}.drivechip:empty{display:none}
 .drivechip.ok{color:var(--ok)}.drivechip.ok a{color:inherit;font-weight:700}.drivechip.wait{color:#b07a00}
 .chips{display:flex;flex-wrap:wrap;gap:8px}
@@ -266,7 +265,6 @@ h2{font-size:20px;text-transform:uppercase;letter-spacing:.05em}
   <span class="save-state" id="saveState"></span>
   <button class="btn" id="btnHome" hidden>All audits</button>
   <button class="btn" id="btnDrive" hidden title="Google Drive">Drive</button>
-  <button class="btn" id="btnOut" hidden>Sign out</button>
   <button class="btn primary" id="btnNew">+ New audit</button>
 </div></header>
 
@@ -425,7 +423,6 @@ const photoCache=new Map();
 
 async function initCaps(){
   const c=window.claude;
-  if((!c||!c.use)&&window.HSSE_FIREBASE&&window.HSSE_FIREBASE.apiKey){initFirebase();return}
   if(!c||!c.use){useLocal();return}
   const timer=setTimeout(()=>{if(!loaded)useLocal()},10000);
   try{ db=await c.use("db"); }catch(e){db=null}
@@ -448,60 +445,13 @@ function startShared(timer){
     else if(view==="report"&&current){const fresh=audits.get(current.id);if(fresh){current=structuredClone(fresh);renderReport()}}
   },err=>{clearTimeout(timer);if(!loaded)useLocal();else setSave("Connection lost – changes may not save","bad")});
 }
-/* ---------- Firebase (used on the GitHub Pages address) ---------- */
-let fbAuth=null,loginMsg="";
-async function initFirebase(){
-  const cfg=window.HSSE_FIREBASE;const base=cfg.sdk||"https://www.gstatic.com/firebasejs/10.12.2/";
-  $("#app").innerHTML=`<div class="empty">Connecting…</div>`;
-  try{for(const f of ["firebase-app-compat.js","firebase-auth-compat.js","firebase-firestore-compat.js"])await loadScript(base+f)}
-  catch(e){$("#app").innerHTML=`<div class="empty">Cannot reach the server. Check your internet connection and reload the page.</div>`;return}
-  firebase.initializeApp(cfg);fbAuth=firebase.auth();const fs=firebase.firestore();
-  if(cfg.emulator){fbAuth.useEmulator(cfg.emulator.auth);fs.useEmulator(cfg.emulator.host,cfg.emulator.port)}
-  else{try{await fs.enablePersistence({synchronizeTabs:true})}catch(e){}}
-  const mapErr=e=>{throw {code:e&&e.code==="permission-denied"?"invalid_argument":e&&e.code==="resource-exhausted"?"quota_exceeded":e&&e.code==="unavailable"?"unavailable":"unknown",message:e&&e.message}};
-  db={collection:c=>{const col=fs.collection(c);return {
-    doc:id=>{const d=col.doc(id);return {
-      // a write is kept on the device at once and uploads when there is signal; do not hold the screen waiting for it
-      set:x=>{const w=d.set(JSON.parse(JSON.stringify(x))).catch(mapErr);w.catch(e=>{if(e.code==="invalid_argument")toast("Your account is not allowed to save – ask the admin")});
-        return Promise.race([w,new Promise(r=>setTimeout(()=>r("pending"),4000))]).then(v=>{if(v==="pending")setSave("Saved on this device – will upload when online");return v})},
-      get:()=>d.get().catch(mapErr),
-      delete:()=>{const w=d.delete().catch(mapErr);return Promise.race([w,new Promise(r=>setTimeout(r,4000))])}}},
-    onSnapshot:(n,e)=>col.onSnapshot(n,err=>{if(err&&err.code==="permission-denied"){loginMsg="Your account does not have access to the HSSE Safety app. Ask the admin to add your email.";try{sessionStorage.setItem("hsse-login-msg",loginMsg)}catch(x){}fbAuth.signOut();return}if(e)e(err)})}}};
-  let started=false;
-  fbAuth.onAuthStateChanged(u=>{
-    $("#btnOut").hidden=!u;$("#btnDrive").hidden=!u;
-    if(!u){if(started){location.reload();return}showLogin(loginMsg);return}
-    me=u.uid;$("#btnOut").title=u.email||"";
-    document.querySelector(".tabs").hidden=false;$("#btnNew").hidden=false;
-    if(!started){started=true;mode="shared";startShared(setTimeout(()=>{if(!loaded){loaded=true;go(view)}},10000));subscribeDrive()}
-    go(location.hash==="#tasks"?"tasks":location.hash==="#tb"?"tb":"list");
-  });
-}
-function showLogin(msg){
-  if(!msg){try{msg=sessionStorage.getItem("hsse-login-msg")||"";sessionStorage.removeItem("hsse-login-msg")}catch(e){}}
-  document.querySelector(".tabs").hidden=true;$("#btnNew").hidden=true;$("#btnHome").hidden=true;$("#scorebar").hidden=true;
-  $("#app").innerHTML=`<section class="card login"><div class="card-h"><h2>Sign in</h2></div><form class="card-b" id="loginForm" novalidate><div class="grid2">
-    <div class="fld full"><label for="li_email">Email</label><input id="li_email" type="email" autocomplete="username" inputmode="email" required></div>
-    <div class="fld full"><label for="li_pw">Password</label><input id="li_pw" type="password" autocomplete="current-password" required></div>
-    <div class="fld full"><div class="warn" id="li_msg">${esc(msg||"")}</div></div>
-    <div class="toolbar"><button class="btn brand" type="submit" id="li_go">Sign in</button><button class="btn ghost" type="button" id="li_reset">Forgot password?</button></div>
-  </div></form></section>`;
-  $("#loginForm").onsubmit=async e=>{e.preventDefault();const em=$("#li_email").value.trim(),pw=$("#li_pw").value;
-    if(!em||!pw){$("#li_msg").textContent="Enter your email and password.";return}
-    $("#li_go").disabled=true;$("#li_msg").textContent="";
-    try{await fbAuth.signInWithEmailAndPassword(em,pw)}
-    catch(err){$("#li_msg").textContent=/network/.test(err.code||"")?"No internet connection. Try again when you have signal.":/too-many/.test(err.code||"")?"Too many tries. Wait a few minutes, or use Forgot password.":"Email or password is not correct."}
-    finally{const b=$("#li_go");if(b)b.disabled=false}};
-  $("#li_reset").onclick=async()=>{const em=$("#li_email").value.trim();if(!em){$("#li_msg").textContent="Type your email first, then tap Forgot password.";return}
-    try{await fbAuth.sendPasswordResetEmail(em)}catch(e){}
-    $("#li_msg").textContent="If this email has an account, a password reset link has been sent to it."};
-}
 async function useLocal(){
   if(mode==="shared"&&loaded)return;
   mode="local";db=null;
   const [A,T,B]=await Promise.all(["hsse-audits","hsse-tasks","hsse-toolbox"].map(devGet));
   audits=new Map((A||[]).map(a=>[a.id,a]));tasks=new Map((T||[]).map(t=>[t.id,t]));tbs=new Map((B||[]).map(t=>[t.id,t]));loaded=tasksLoaded=tbLoaded=true;
   if(view==="list")renderList();if(view==="tasks")renderTasks();if(view==="tb")renderTb();
+  loadDrive();
 }
 let saveChain=Promise.resolve(), saveTimer=null, dirty=false;
 function setSave(t,k){const s=$("#saveState");s.textContent=t;s.style.color=k==="bad"?"var(--hivis)":""}
@@ -591,7 +541,7 @@ function renderList(){
   const q=listFilter.q.toLowerCase();
   const shown=arr.filter(a=>(listFilter.st==="all"||a.status===listFilter.st)&&(!q||[a.site,a.client,a.work,a.auditBy,a.contractor,a.formId].join(" ").toLowerCase().includes(q)));
   $("#app").innerHTML=`
-   ${mode==="local"&&loaded?`<div class="notice dev"><div><b>Records are saved on this phone or computer only.</b> Use <b>Backup</b> regularly to keep a copy, and <b>Restore</b> to load records from another device.</div>
+   ${mode==="local"&&loaded?`<div class="notice dev"><div><b>Records are saved on this phone or computer.</b> ${driveAvail()?(driveOn()?"Each submitted audit, task and toolbox meeting is also copied to Google Drive. ":"Tap <b>Drive</b> at the top to copy records to Google Drive. "):""}Use <b>Backup</b> / <b>Restore</b> to move records to another device.</div>
      <div class="toolbar"><button class="btn" id="btnBackup">Backup</button><button class="btn" id="btnRestore">Restore</button><input type="file" id="restoreIn" accept=".json,application/json" hidden></div></div>`:""}
    <div><h1>Site audits</h1><div class="muted">Inspection records for the HSSE Department. Tap an audit to view or continue it.</div></div>
    <div class="tiles">
@@ -1218,18 +1168,22 @@ function exportTbCsv(){
   save(`hsse-toolbox-${localDT(new Date()).slice(0,10)}.csv`,[cols,...rows].map(r=>r.map(cell).join(",")).join("\r\n"));
 }
 
-/* ============ GOOGLE DRIVE (Firebase mode) ============ */
-// Each submitted audit, saved task and saved toolbox meeting is sent to the owner's Google Apps Script,
-// which files the PDF + photos in Drive and writes a row in the "HSSE Safety Records" sheet.
-let driveCfg=null, driveLog=new Map(), driveBusy=false, driveSubscribed=false;
+/* ============ GOOGLE DRIVE (GitHub address) ============ */
+// Outside claude.ai (the GitHub address) each submitted audit, saved task and saved toolbox meeting is sent to the
+// department's Google Apps Script, which files the PDF + photos in Drive and writes a row in the "HSSE Safety Records" sheet.
+// The script URL + key and the upload log are kept on each device (IndexedDB).
+let driveCfg=null, driveLog=new Map(), driveBusy=false, driveLoaded=false;
 const DTYPE={audit:"Site audit",task:"Task",toolbox:"Toolbox meeting"};
-function driveOn(){return mode==="shared"&&!!fbAuth&&!!(driveCfg&&driveCfg.url&&driveCfg.key)}
-function subscribeDrive(){
-  if(driveSubscribed||!fbAuth)return;driveSubscribed=true;
-  db.collection("settings").onSnapshot(s=>{const d=s.docs.find(x=>x.id==="drive");driveCfg=d?d.data():null;if(view==="drive")renderDrive();processDriveQueue()},()=>{});
-  db.collection("drivelog").onSnapshot(s=>{driveLog=new Map(s.docs.map(d=>[d.id,d.data()]));refreshDriveChips()},()=>{});
+function driveAvail(){return !window.claude}
+function driveOn(){return driveAvail()&&!!(driveCfg&&driveCfg.url&&driveCfg.key)}
+async function loadDrive(){
+  if(driveLoaded||!driveAvail())return;driveLoaded=true;
+  driveCfg=(await devGet("drive-settings"))||null;driveLog=new Map(Object.entries((await devGet("drive-log"))||{}));
+  $("#btnDrive").hidden=false;
   window.addEventListener("online",()=>processDriveQueue());setInterval(()=>processDriveQueue(),120000);
+  refreshDriveChips();processDriveQueue();
 }
+async function saveDriveLog(){try{await IDB.set("drive-log",Object.fromEntries(driveLog))}catch(e){lsSet("drive-log",Object.fromEntries(driveLog))}}
 const sheetSafe=v=>{v=v==null?"":v;return typeof v==="string"&&/^[=+\-@]/.test(v)?"'"+v:v};
 async function blobToB64(b){return new Promise((res,rej)=>{const f=new FileReader();f.onload=()=>res(String(f.result).split(",")[1]);f.onerror=rej;f.readAsDataURL(b)})}
 async function photoPayload(list){
@@ -1270,7 +1224,7 @@ async function buildDrivePayload(type,id){
 async function driveQueue(){try{return (await IDB.get("drive-queue"))||[]}catch(e){return lsGet("drive-queue")||[]}}
 async function driveQueueSet(q){try{await IDB.set("drive-queue",q)}catch(e){lsSet("drive-queue",q)}}
 async function driveSend(type,id){
-  if(!(mode==="shared"&&fbAuth))return;
+  if(!driveAvail())return;
   const q=(await driveQueue()).filter(x=>!(x.type===type&&x.id===id));q.push({type,id,at:Date.now()});await driveQueueSet(q);
   refreshDriveChips();processDriveQueue();
 }
@@ -1287,24 +1241,24 @@ async function processDriveQueue(){
     while(q.length){
       const it=q[0];let res,p;
       try{p=await buildDrivePayload(it.type,it.id);res=await postDrive(p);
-        await db.collection("drivelog").doc(it.type+"_"+it.id).set({at:new Date().toISOString(),pdfUrl:res.pdfUrl||"",folderUrl:res.folderUrl||"",sheetUrl:res.sheetUrl||"",deleted:!!p.deleted});
+        driveLog.set(it.type+"_"+it.id,{at:new Date().toISOString(),pdfUrl:res.pdfUrl||"",folderUrl:res.folderUrl||"",sheetUrl:res.sheetUrl||"",deleted:!!p.deleted});await saveDriveLog();
         if(!p.deleted)toast(`${DTYPE[it.type]} saved to Google Drive`);}
       catch(e){if(/key|URL/.test(e.message||""))toast(e.message);break}
       q=(await driveQueue()).filter(x=>!(x.type===it.type&&x.id===it.id&&x.at<=it.at));await driveQueueSet(q);
     }
   }finally{driveBusy=false;refreshDriveChips()}
 }
-function driveChip(type,id){if(!(mode==="shared"&&fbAuth))return "";return `<span class="drivechip" data-drive="${type}_${id}"></span>`}
+function driveChip(type,id){if(!driveAvail())return "";return `<span class="drivechip" data-drive="${type}_${id}"></span>`}
 async function refreshDriveChips(){
   const els=document.querySelectorAll("[data-drive]");if(!els.length)return;const q=await driveQueue();
   els.forEach(el=>{const k=el.dataset.drive;const log=driveLog.get(k);const waiting=q.some(x=>x.type+"_"+x.id===k);
-    if(waiting){el.className="drivechip wait";el.textContent=driveOn()?"Uploading to Google Drive…":"Waiting for Google Drive setup";}
+    if(waiting){el.className="drivechip wait";el.textContent=!driveOn()?"Waiting for Google Drive setup on this device":navigator.onLine?"Uploading to Google Drive…":"Will upload to Google Drive when there is signal";}
     else if(log&&!log.deleted){el.className="drivechip ok";el.innerHTML=`Saved to Google Drive · ${esc(fmtDT(log.at))}${log.pdfUrl?` · <a href="${esc(log.pdfUrl)}" target="_blank" rel="noopener">Open PDF</a>`:log.sheetUrl?` · <a href="${esc(log.sheetUrl)}" target="_blank" rel="noopener">Open sheet</a>`:""}`}
     else{el.className="drivechip";el.textContent=""}});
 }
 function renderDrive(){
   if(view!=="drive")return;const c=driveCfg||{};
-  $("#app").innerHTML=`<div><h1>Google Drive</h1><div class="muted">Submitted site audits, saved tasks and toolbox meetings are copied to Google Drive: PDFs and photos in folders, and every record as a row in the "HSSE Safety Records" Google Sheet.</div></div>
+  $("#app").innerHTML=`<div><h1>Google Drive</h1><div class="muted">Submitted site audits, saved tasks and toolbox meetings from this phone or computer are copied to the department's Google Drive: PDFs and photos in folders, and every record as a row in the "HSSE Safety Records" Google Sheet. Set this up once on each device.</div></div>
    <section class="card"><div class="card-h"><h2>Connection</h2><span class="sc">${driveOn()?"Connected":"Not set up"}</span></div><div class="card-b"><div class="grid2">
      <div class="fld full"><label for="dr_url">Web app URL</label><input id="dr_url" value="${esc(c.url||"")}" placeholder="https://script.google.com/macros/s/…/exec" inputmode="url"></div>
      <div class="fld full"><label for="dr_key">Drive key</label><input id="dr_key" value="${esc(c.key||"")}" placeholder="From the setup log in Apps Script"></div>
@@ -1312,17 +1266,17 @@ function renderDrive(){
      <div class="toolbar"><button class="btn" id="dr_test">Test connection</button><button class="btn brand" id="dr_save">Save</button></div>
    </div></div></section>
    <section class="card"><div class="card-h"><h2>Send existing records</h2></div><div class="card-b" style="padding-top:12px;display:flex;flex-direction:column;gap:10px">
-     <div class="muted">Copies every submitted audit, every task and every toolbox meeting already in the app. Records already in Drive are updated, not duplicated.</div>
+     <div class="muted">Copies every submitted audit, task and toolbox meeting saved on this device. Records already in Drive are updated, not duplicated.</div>
      <div><button class="btn" id="dr_all" ${driveOn()?"":"disabled"}>Send all records to Google Drive</button></div><div id="dr_q" class="muted"></div></div></section>`;
   const msg=t=>$("#dr_msg").textContent=t;
   const read=()=>({url:$("#dr_url").value.trim(),key:$("#dr_key").value.trim()});
-  const urlOk=u=>/^https:\/\/script\.google\.com\/(a\/[^/]+\/)?macros\/s\/[^/]+\/exec$/.test(u)||(window.HSSE_FIREBASE&&window.HSSE_FIREBASE.emulator);
+  const urlOk=u=>/^https:\/\/script\.google\.com\/(a\/[^/]+\/)?macros\/s\/[^/]+\/exec$/.test(u)||window.HSSE_DRIVE_TEST;
   $("#dr_test").onclick=async()=>{const v=read();if(!urlOk(v.url)){msg("The URL should start with https://script.google.com/macros/s/ and end with /exec");return}
     msg("Testing…");try{const j=await postDrive({type:"ping"},v);$("#dr_msg").innerHTML=`Connected. <a href="${esc(j.folderUrl)}" target="_blank" rel="noopener">Open Drive folder</a> · <a href="${esc(j.sheetUrl)}" target="_blank" rel="noopener">Open sheet</a>`}
     catch(e){msg(e.message||"Could not reach the Drive link")}};
   $("#dr_save").onclick=async()=>{const v=read();if(!v.url||!v.key){msg("Fill in both the Web app URL and the Drive key");return}
     if(!urlOk(v.url)){msg("The URL should start with https://script.google.com/macros/s/ and end with /exec");return}
-    try{await db.collection("settings").doc("drive").set({...v,by:me,at:new Date().toISOString()});driveCfg=v;toast("Drive settings saved");renderDrive();processDriveQueue()}catch(e){msg("Could not save the settings")}};
+    try{await IDB.set("drive-settings",{...v,at:new Date().toISOString()})}catch(e){lsSet("drive-settings",v)}driveCfg=v;toast("Drive settings saved on this device");renderDrive();processDriveQueue()};
   $("#dr_all").onclick=async()=>{const q=await driveQueue();const now=Date.now();let n=0;
     const add=(type,id)=>{if(!q.some(x=>x.type===type&&x.id===id)){q.push({type,id,at:now});n++}};
     [...audits.values()].filter(a=>a.status==="closed").forEach(a=>add("audit",a.id));[...tasks.keys()].forEach(id=>add("task",id));[...tbs.keys()].forEach(id=>add("toolbox",id));
@@ -1334,9 +1288,8 @@ $("#btnNew").onclick=()=>{if(TABOF[view]==="tb"){curTb=newTb();go("tbedit");retu
   if(view==="form"&&dirty)saveNow();current=newAudit();audits.set(current.id,current);go("form");queueSave()};
 $("#btnHome").onclick=()=>go("list");
 $("#btnDrive").onclick=()=>go("drive");
-$("#btnOut").onclick=()=>confirmBox("Sign out?","You will need your email and password to sign in again.","Sign out",async()=>{if(dirty)await saveNow();await fbAuth.signOut();location.reload()});
 window.addEventListener("beforeunload",()=>{if(dirty)saveNow()});
 document.querySelectorAll("[data-tab]").forEach(b=>b.onclick=()=>go(b.dataset.tab));
-if(!(window.HSSE_FIREBASE&&window.HSSE_FIREBASE.apiKey&&!window.claude)){if(location.hash==="#tasks")go("tasks");else if(location.hash==="#tb")go("tb");else go("list");}
+if(location.hash==="#tasks")go("tasks");else if(location.hash==="#tb")go("tb");else go("list");
 initCaps();
 </script>
