@@ -9,7 +9,7 @@ The app at https://shaifulsyazwan10.github.io/hsse-safety-app/ uses Firebase for
    - hsse7@octagonmaju.com.my
    - hsse10@octagonmaju.com.my
 4. **Create the database** – *Build → Firestore Database → Create database* → location **asia-southeast1 (Singapore)** → *Start in production mode* → *Create*.
-5. **Lock the database to the team** – *Firestore → Rules*, replace everything with the contents of [`firestore.rules`](firestore.rules), then *Publish*.
+5. **Lock the database to the team** – *Firestore → Rules*, replace everything with the contents of [`firestore.rules`](firestore.rules), then *Publish*. (It also allows the `settings` and `drivelog` collections used by the Google Drive copy.)
 6. **Allow the GitHub address to sign in** – *Authentication → Settings → Authorized domains → Add domain* → `shaifulsyazwan10.github.io`.
 7. **Get the web config** – *Project settings (gear) → Your apps → Web (`</>`)* → nickname `hsse-web` → *Register app* → copy the `firebaseConfig` object into [`docs/firebase-config.js`](docs/firebase-config.js) as `window.HSSE_FIREBASE = { ... };` and commit. (These values identify the project; they are not passwords. Security comes from step 5.)
 

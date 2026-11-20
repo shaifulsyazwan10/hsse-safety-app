@@ -11,7 +11,7 @@ service cloud.firestore {
       ];
     }
     match /{collection}/{id} {
-      allow read, write: if isTeam() && collection in ['audits', 'tasks', 'toolbox', 'photos'];
+      allow read, write: if isTeam() && collection in ['audits', 'tasks', 'toolbox', 'photos', 'settings', 'drivelog'];
     }
   }
 }
