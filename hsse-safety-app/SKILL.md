@@ -9,6 +9,7 @@ A single-page web app for the HSSE / Safety Department of Octagon Group of Compa
 
 - **Live app (Artifact):** https://claude.ai/artifact/ArdGTfN88sBMYUmodk6uK1
 - **Full source:** `assets/hsse-safety-app.html` (the exact published page, ~110 KB, logo embedded)
+- **GitHub copy (device-only version):** https://shaifulsyazwan10.github.io/hsse-safety-app/ — served from `docs/index.html` in github.com/shaifulsyazwan10/hsse-safety-app (GitHub Pages, branch `main`, folder `/docs`). Build it by wrapping `assets/hsse-safety-app.html` in a full HTML document (doctype, charset, viewport with `viewport-fit=cover`, the small reset incl. `[hidden]{display:none!important}`). Outside claude.ai the same code saves to IndexedDB on each device, downloads PDF/CSV through the browser, and shows Backup / Restore (JSON, merged by `updatedAt`) to move records between devices. There is no shared team data there. `scripts/standalone-test.js` checks this mode.
 - **Daily email instructions:** `references/daily-task-email.md`
 
 ## How to work on it
