@@ -9,7 +9,7 @@
   --ink:#16222e; --ink-2:#4b5a68; --ink-3:#7a8896;
   --brand:#00008B; --brand-ink:#ffffff; --brand-fg:#00008B; --hivis:#f2b300; --hivis-ink:#1b1400;
   --ok:#1f8a4c; --ok-bg:#e3f4ea; --bad:#c62f2f; --bad-bg:#fbe6e5; --na:#6b7783; --na-bg:#e8ecef;
-  --focus:#2d7ff9; --s1:#2a78d6; --s2:#eb6834; --s3:#1baf7a;
+  --focus:#2d7ff9; --s1:#2a78d6; --s2:#eb6834; --s3:#1baf7a; --s4:#eda100;
   --f-display:"Barlow Condensed","Arial Narrow",Arial,sans-serif;
   --f-body:"Barlow",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
   --f-mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
@@ -19,13 +19,13 @@
   --ink:#e6edf3; --ink-2:#a9b6c2; --ink-3:#7d8b98;
   --brand:#00008B; --brand-ink:#ffffff; --brand-fg:#9aa8ff; --hivis:#f5c02a; --hivis-ink:#1b1400;
   --ok:#4cc27e; --ok-bg:#16301f; --bad:#ff6b63; --bad-bg:#3a1b1a; --na:#9aa6b1; --na-bg:#25313c;
-  --focus:#6fa8ff; --s1:#3987e5; --s2:#d95926; --s3:#199e70; color-scheme:dark}}
+  --focus:#6fa8ff; --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#c98500; color-scheme:dark}}
 :root[data-theme="dark"]{
   --bg:#0f151b; --surface:#17202a; --surface-2:#1d2833; --line:#2c3a47;
   --ink:#e6edf3; --ink-2:#a9b6c2; --ink-3:#7d8b98;
   --brand:#00008B; --brand-ink:#ffffff; --brand-fg:#9aa8ff; --hivis:#f5c02a; --hivis-ink:#1b1400;
   --ok:#4cc27e; --ok-bg:#16301f; --bad:#ff6b63; --bad-bg:#3a1b1a; --na:#9aa6b1; --na-bg:#25313c;
-  --focus:#6fa8ff; --s1:#3987e5; --s2:#d95926; --s3:#199e70; color-scheme:dark}
+  --focus:#6fa8ff; --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#c98500; color-scheme:dark}
 
 *{box-sizing:border-box}
 [hidden]{display:none!important}
@@ -274,6 +274,15 @@ h2{font-size:20px;text-transform:uppercase;letter-spacing:.05em}
 .viz-empty{padding:40px 10px;text-align:center;color:var(--ink-2)}
 .viz-table{overflow-x:auto}.viz-table table{border-collapse:collapse;width:100%;font-size:13px;font-variant-numeric:tabular-nums}
 .viz-table th,.viz-table td{border-bottom:1px solid var(--line);padding:5px 8px;text-align:right}.viz-table th:first-child{text-align:left}
+.ans.marks{display:grid;grid-template-columns:repeat(5,1fr);width:100%}
+.ans.marks button{min-width:0;padding:8px 4px}.ans.marks button small{font-size:10px}
+.ans.marks button[aria-pressed="true"].m1,.ans.marks button[aria-pressed="true"].m2{background:var(--bad);color:#fff}
+.ans.marks button[aria-pressed="true"].m3{background:var(--hivis);color:var(--hivis-ink)}
+.ans.marks button[aria-pressed="true"].m4,.ans.marks button[aria-pressed="true"].m5{background:var(--ok);color:#fff}
+.mk{display:inline-block;font-size:13px;font-weight:700;padding:3px 9px;border-radius:6px;white-space:nowrap}
+.mk1,.mk2{background:var(--bad-bg);color:var(--bad)}.mk3{background:color-mix(in srgb,var(--hivis) 25%,var(--surface));color:var(--ink)}.mk4,.mk5{background:var(--ok-bg);color:var(--ok)}
+.pdfdoc .mk3,.pdfdoc .pa-band.b3{background:#fbe9b7}
+.pa-band.b1,.pa-band.b2{background:var(--bad-bg);color:var(--bad)}.pa-band.b3{background:color-mix(in srgb,var(--hivis) 25%,var(--surface));color:var(--ink)}.pa-band.b4,.pa-band.b5{background:var(--ok-bg);color:var(--ok)}
 .chips{display:flex;flex-wrap:wrap;gap:8px}
 .chipbtn{border:1px solid var(--line);background:var(--surface-2);border-radius:999px;padding:7px 13px;font-weight:600;font-size:14px;cursor:pointer;min-height:38px}
 .chipbtn[aria-pressed="true"]{background:var(--brand);color:var(--brand-ink);border-color:var(--brand)}
@@ -321,6 +330,7 @@ h2{font-size:20px;text-transform:uppercase;letter-spacing:.05em}
   <button data-tab="list" aria-current="false">Site audits</button>
   <button data-tab="tasks" aria-current="false">Task updates</button>
   <button data-tab="tb" aria-current="false">Toolbox meeting</button>
+  <button data-tab="pa" aria-current="false">Production audit</button>
 </div></nav>
 <main class="wrap" id="app"></main>
 <div id="scorebar" class="scorebar" hidden></div>
@@ -483,7 +493,7 @@ async function initCaps(){
   startShared(timer);
 }
 function startShared(timer){
-  subscribeTasks();subscribeTb();
+  subscribeTasks();subscribeTb();subscribePa();
   db.collection("audits").onSnapshot(snap=>{
     clearTimeout(timer);
     const m=new Map();snap.docs.forEach(d=>{if(d.exists){const v=d.data();m.set(v.id,v)}});
@@ -497,7 +507,7 @@ function startShared(timer){
 async function useLocal(){
   if(mode==="shared"&&loaded)return;
   mode="local";db=null;
-  const [A,T,B]=await Promise.all(["hsse-audits","hsse-tasks","hsse-toolbox"].map(devGet));
+  const [A,T,B,PA]=await Promise.all(["hsse-audits","hsse-tasks","hsse-toolbox","hsse-production"].map(devGet));pas=new Map((PA||[]).map(r=>[r.id,r]));paLoaded=true;
   audits=new Map((A||[]).map(a=>[a.id,a]));tasks=new Map((T||[]).map(t=>[t.id,t]));tbs=new Map((B||[]).map(t=>[t.id,t]));loaded=tasksLoaded=tbLoaded=true;
   await loadDrive();
   if(needLogin()){showLogin();return}
@@ -571,13 +581,13 @@ function go(v,id){
   view=v;
   if(id!==undefined){const a=audits.get(id);current=a?structuredClone(a):null}
   $("#btnHome").hidden=!(v==="form"||v==="report");
-  const tab=TABOF[v]||"list";$("#btnNew").textContent={dash:"+ New audit",list:"+ New audit",tasks:"+ New task",tb:"+ New toolbox"}[tab];$("#app").classList.toggle("wide",v==="dash");
+  const tab=TABOF[v]||"list";$("#btnNew").textContent={dash:"+ New audit",list:"+ New audit",tasks:"+ New task",tb:"+ New toolbox",pa:"+ New audit"}[tab];$("#app").classList.toggle("wide",v==="dash");
   document.querySelectorAll("[data-tab]").forEach(b=>b.setAttribute("aria-current",String(b.dataset.tab===tab)));
   $("#scorebar").hidden=v!=="form";
   if(v!=="form")setSave("");
   try{history.replaceState(null,"",v==="dash"?location.pathname+location.search:"#"+(v==="list"?"audits":tab==="list"?v:tab))}catch(e){}
   window.scrollTo(0,0);setTimeout(refreshDriveChips,0);
-  if(v==="list")renderList();else if(v==="form")renderForm();else if(v==="tasks")renderTasks();else if(v==="task")renderTaskEdit();else if(v==="tb")renderTb();else if(v==="dash")renderDash();else if(v==="drive")renderDrive();else if(v==="tbedit")renderTbEdit();else if(v==="tbview")renderTbView();else renderReport();
+  if(v==="list")renderList();else if(v==="form")renderForm();else if(v==="tasks")renderTasks();else if(v==="task")renderTaskEdit();else if(v==="tb")renderTb();else if(v==="dash")renderDash();else if(v==="pa")renderPa();else if(v==="paedit")renderPaEdit();else if(v==="paview")renderPaView();else if(v==="drive")renderDrive();else if(v==="tbedit")renderTbEdit();else if(v==="tbview")renderTbView();else renderReport();
 }
 
 /* ============ LIST VIEW ============ */
@@ -944,16 +954,16 @@ function tbPdfArgs(t){
     body:tbBody(t),footer:`Toolbox Meeting · ${t.location||""}`,filename:`Toolbox-Meeting-${t.date}-${(t.time||"").replace(":","")}-${slug(t.location)||"Factory"}.pdf`};
 }
 function backupAll(){
-  const data={app:"hsse-safety",version:1,exportedAt:new Date().toISOString(),audits:[...audits.values()],tasks:[...tasks.values()],toolbox:[...tbs.values()]};
+  const data={app:"hsse-safety",version:1,exportedAt:new Date().toISOString(),audits:[...audits.values()],tasks:[...tasks.values()],toolbox:[...tbs.values()],production:[...pas.values()]};
   save(`hsse-safety-backup-${localDT(new Date()).slice(0,10)}.json`,JSON.stringify(data));
 }
 async function restoreAll(file){
   if(!file)return;let d;try{d=JSON.parse(await file.text())}catch(e){toast("This file is not an HSSE Safety backup");return}
   if(!d||d.app!=="hsse-safety"){toast("This file is not an HSSE Safety backup");return}
   const merge=(map,arr)=>{let n=0;for(const r of arr||[]){if(!r||!r.id)continue;const cur=map.get(r.id);if(!cur||(r.updatedAt||"")>(cur.updatedAt||"")){map.set(r.id,r);n++}}return n};
-  const n=merge(audits,d.audits)+merge(tasks,d.tasks)+merge(tbs,d.toolbox);
-  try{if(mode==="shared"){for(const [c,m] of [["audits",audits],["tasks",tasks],["toolbox",tbs]])for(const r of m.values())await db.collection(c).doc(r.id).set(r)}
-    else{await IDB.set("hsse-audits",[...audits.values()]);await IDB.set("hsse-tasks",[...tasks.values()]);await IDB.set("hsse-toolbox",[...tbs.values()])}
+  const n=merge(audits,d.audits)+merge(tasks,d.tasks)+merge(tbs,d.toolbox)+merge(pas,d.production);
+  try{if(mode==="shared"){for(const [c,m] of [["audits",audits],["tasks",tasks],["toolbox",tbs],["production",pas]])for(const r of m.values())await db.collection(c).doc(r.id).set(r)}
+    else{await IDB.set("hsse-audits",[...audits.values()]);await IDB.set("hsse-tasks",[...tasks.values()]);await IDB.set("hsse-toolbox",[...tbs.values()]);await IDB.set("hsse-production",[...pas.values()])}
     toast(`Restored ${n} record${n===1?"":"s"}`)}catch(e){toast("Could not restore – storage is full or not available")}
   go(view);
 }
@@ -1112,7 +1122,7 @@ setInterval(()=>{document.querySelectorAll("[data-rem]").forEach(el=>{const t=vi
 
 /* ============ TOOLBOX MEETING ============ */
 let tbs=new Map(), tbLoaded=false, curTb=null, tbFilter={q:""};
-const TABOF={dash:"dash",drive:"list",list:"list",form:"list",report:"list",tasks:"tasks",task:"tasks",tb:"tb",tbedit:"tb",tbview:"tb"};
+const TABOF={pa:"pa",paedit:"pa",paview:"pa",dash:"dash",drive:"list",list:"list",form:"list",report:"list",tasks:"tasks",task:"tasks",tb:"tb",tbedit:"tb",tbview:"tb"};
 function tbPeople(){return {safety:AUDITORS,site:ENGINEERS.filter(n=>n!=="Not Available")}}
 function subscribeTb(){
   db.collection("toolbox").onSnapshot(snap=>{const m=new Map();snap.docs.forEach(d=>{if(d.exists){const v=d.data();m.set(v.id,v)}});tbs=m;tbLoaded=true;
@@ -1226,7 +1236,7 @@ function exportTbCsv(){
 // department's Google Sheet (checked by the department's Apps Script). Records stay on each device, and each
 // submitted audit, saved task and saved toolbox meeting is copied to Google Drive by the same script.
 let driveUrl="", session=null, driveLog=new Map(), driveBusy=false, driveLoaded=false;
-const DTYPE={audit:"Site audit",task:"Task",toolbox:"Toolbox meeting"};
+const DTYPE={audit:"Site audit",task:"Task",toolbox:"Toolbox meeting",production:"Production audit"};
 function driveAvail(){return !window.claude}
 function sessionOk(){return !!(session&&session.token&&session.exp>Date.now())}
 function driveOn(){return driveAvail()&&!!driveUrl&&sessionOk()}
@@ -1265,7 +1275,7 @@ function showLogin(msg){
       $("#li_msg").textContent="";document.querySelector(".tabs").hidden=false;$("#btnNew").hidden=false;showAccountButton();
       toast(`Signed in as ${j.name}`);
       if(j.mustChange){go("drive");setTimeout(()=>{const x=$("#ac_msg");if(x)x.textContent="Please change the starting password your admin gave you."},50)}
-      else go(location.hash==="#tasks"?"tasks":location.hash==="#tb"?"tb":location.hash==="#audits"?"list":"dash");
+      else go(location.hash==="#tasks"?"tasks":location.hash==="#tb"?"tb":location.hash==="#audits"?"list":location.hash==="#pa"?"pa":"dash");
       processDriveQueue();}
     catch(err){m(err.message);const b=$("#li_go");if(b)b.disabled=false}};
 }
@@ -1309,6 +1319,15 @@ async function buildDrivePayload(type,id){
     return {type,id,month:month(t.due),row:[["Task",t.title],["Details",t.desc],["Assigned to",t.assignee],["Priority",TPRIO[t.priority||"M"]],["Status",TSTATUS[t.status]],
       ["Progress %",t.pct||0],["Start date",t.start],["Date to complete",t.due],["Time",t.dueTime],["Remaining",remaining(t).txt],
       ["Completed on",t.completedAt?fmtDT(t.completedAt):""],["Latest update",last?`${fmtDT(last.at)} – ${last.note||TSTATUS[last.status]+" "+last.pct+"%"}`:""]].map(([k,v])=>[k,sheetSafe(v)])};
+  }
+  if(type==="production"){
+    const r=pas.get(id);if(!r||r.status!=="closed")return {type,id,deleted:true};const sc=paScore(r);const args=paPdfArgs(r);const pdf=await makePdf({...args,blobOnly:true});
+    const low=PA_ITEMS.filter(q=>+(r.marks?.[q.id]?.v)&&+r.marks[q.id].v<=2).map(q=>`${q.id} ${q.t} – mark ${r.marks[q.id].v}: ${r.marks[q.id].c||""}`);
+    return {type,id,month:month(r.date),folderName:`${r.date} ${r.area||"Area"}`,pdf:{name:args.filename,data:await blobToB64(pdf)},
+      photos:await photoPayload(PA_ITEMS.map(q=>[`Item ${q.id}`,r.marks?.[q.id]?.p])),
+      row:[["Status","Submitted"],["Date",r.date],["Area",r.area],["Supervisor",r.supervisor],["Activity",r.activity],["Audit by",r.auditBy],["Total",sc.tot],["Max",PA_MAX],
+        ["Score %",sc.pct==null?"":Math.round(sc.pct*10)/10],["Rating",sc.band],...PA_SECTIONS.map(sec=>[`No.${sec.no} ${sec.title}`,`${sc.per[sec.no].t}/${sc.per[sec.no].max}`]),
+        ["Low marks (1–2)",low.join("\n")],["Submitted",r.closedAt?fmtDT(r.closedAt):""]].map(([k,v])=>[k,sheetSafe(v)])};
   }
   if(type==="toolbox"){
     const t=tbs.get(id);if(!t)return {type,id,deleted:true};const args=tbPdfArgs(t);const pdf=await makePdf({...args,blobOnly:true});
@@ -1367,7 +1386,7 @@ async function renderDrive(){
     $("#dr_msg").innerHTML=`Connected. <a href="${esc(j.folderUrl)}" target="_blank" rel="noopener">Open Drive folder</a> · <a href="${esc(j.sheetUrl)}" target="_blank" rel="noopener">Open sheet</a>`}catch(e){msg(e.message)}};
   $("#dr_all").onclick=async()=>{const q=await driveQueue();const now=Date.now();let n=0;
     const add=(type,id)=>{if(!q.some(x=>x.type===type&&x.id===id)){q.push({type,id,at:now});n++}};
-    [...audits.values()].filter(a=>a.status==="closed").forEach(a=>add("audit",a.id));[...tasks.keys()].forEach(id=>add("task",id));[...tbs.keys()].forEach(id=>add("toolbox",id));
+    [...audits.values()].filter(a=>a.status==="closed").forEach(a=>add("audit",a.id));[...tasks.keys()].forEach(id=>add("task",id));[...tbs.keys()].forEach(id=>add("toolbox",id));[...pas.values()].filter(r=>r.status==="closed").forEach(r=>add("production",r.id));
     await driveQueueSet(q);msg(`${n} record${n===1?"":"s"} added to the upload list. Keep this page open until they finish.`);processDriveQueue()};
   $("#pwForm").onsubmit=async e=>{e.preventDefault();const m=t=>$("#ac_msg").textContent=t;
     const o=$("#ac_old").value,n1=$("#ac_new").value,n2=$("#ac_new2").value;
@@ -1375,6 +1394,144 @@ async function renderDrive(){
     $("#ac_go").disabled=true;try{await callServer(driveUrl,{type:"password",token:session.token,old:o,password:n1});m("");["#ac_old","#ac_new","#ac_new2"].forEach(x=>$(x).value="");toast("Password changed")}
     catch(err){m(err.message)}finally{$("#ac_go").disabled=false}};
   $("#ac_out").onclick=()=>confirmBox("Sign out?","Records stay saved on this device. You need your email and password to sign in again.","Sign out",signOut);
+}
+/* ============ PRODUCTION AUDIT (Production Safety League Program) ============ */
+const PA_SECTIONS=[
+ {no:1,title:"Personal Protective Equipment",qs:["Required PPE worn correctly.","Special PPE available and used (respirator, ear plug, harness, etc.).","PPE in good condition and sufficient."]},
+ {no:2,title:"Electrical",qs:["All the cable is properly arranged at the working area.","Cable ramp being used when required / the cable crosses the walkway.","All cable / electrical connection in good conditions and safe.","No exposed or damaged cables."]},
+ {no:3,title:"Power Tools & Equipment",qs:["Power tools & equipment is in good condition and safe to use.","Power tools & equipment being covered / guarded.","No modification on the equipment / machinery."]},
+ {no:4,title:"Housekeeping at Working Area",qs:["Work area clean and tidy.","Tools and materials stored properly.","Drinking water and personal belongings at designated area."]},
+ {no:5,title:"Access Way",qs:["All the access way / pathway is not being blocked by material or equipment."]},
+ {no:6,title:"Chemical",qs:["Chemicals properly stored and labelled.","SDS available and up to date."]},
+].map(s=>({...s,qs:s.qs.map((t,i)=>({id:`${s.no}.${i+1}`,t}))}));
+const PA_ITEMS=PA_SECTIONS.flatMap(s=>s.qs);const PA_MAX=PA_ITEMS.length*5;
+const PA_MARKS={5:"Excellent",4:"Good",3:"Average",2:"Below Average",1:"Poor"};
+let pas=new Map(), paLoaded=false, curPa=null, paFilter={q:"",st:"all"};
+function paScore(r){let tot=0,n=0;const per={};for(const s of PA_SECTIONS){let st=0,sn=0;for(const q of s.qs){const v=+(r.marks?.[q.id]?.v||0);if(v){st+=v;sn++}}per[s.no]={t:st,n:sn,max:s.qs.length*5};tot+=st;n+=sn}
+  const pct=n?tot/(n*5)*100:null;const avg=n?tot/n:null;const band=avg==null?"":avg>=4.5?"Excellent":avg>=3.5?"Good":avg>=2.5?"Average":avg>=1.5?"Below Average":"Poor";
+  return {tot,n,pct,avg,band,per,answered:n,total:PA_ITEMS.length}}
+function subscribePa(){db.collection("production").onSnapshot(snap=>{const m=new Map();snap.docs.forEach(d=>{if(d.exists){const v=d.data();m.set(v.id,v)}});pas=m;paLoaded=true;
+  if(view==="pa")keepFocus(renderPa);else if(view==="dash")keepFocus(renderDash);else if(view==="paview"&&curPa&&pas.get(curPa.id)){curPa=structuredClone(pas.get(curPa.id));renderPaView()}},()=>{paLoaded=true;if(view==="pa")renderPa()})}
+async function savePa(r){pas.set(r.id,r);if(mode==="shared")await db.collection("production").doc(r.id).set(r);else await IDB.set("hsse-production",[...pas.values()])}
+function newPa(){const n=new Date();return {id:uid(),status:"draft",supervisor:"",area:"",date:localDT(n).slice(0,10),activity:"",auditBy:"",marks:{},createdAt:n.toISOString(),updatedAt:n.toISOString(),createdBy:me||null,closedAt:null,_new:true}}
+const paChip=v=>v?`<span class="mk mk${v}">${v} · ${PA_MARKS[v]}</span>`:`<span class="chip u">Not marked</span>`;
+function renderPa(){
+  if(view!=="pa")return;
+  const arr=[...pas.values()].sort((a,b)=>(b.date||"").localeCompare(a.date||""));
+  const closed=arr.filter(r=>r.status==="closed");const ym=localDT(new Date()).slice(0,7);
+  const sc=closed.map(paScore).filter(s=>s.pct!=null);const avg=sc.length?sc.reduce((t,s)=>t+s.pct,0)/sc.length:null;
+  const q=paFilter.q.toLowerCase();const shown=arr.filter(r=>(paFilter.st==="all"||r.status===paFilter.st)&&(!q||[r.area,r.supervisor,r.activity,r.auditBy,r.date].join(" ").toLowerCase().includes(q)));
+  const d=new Date();d.setDate(d.getDate()-90);const from=localDT(d).slice(0,10);
+  const recent=closed.filter(r=>(r.date||"")>=from);
+  const areas=[...new Set(recent.map(r=>r.area).filter(Boolean))].map(a=>{const s=recent.filter(r=>r.area===a).map(paScore).filter(x=>x.pct!=null);return {a,v:s.length?s.reduce((t,x)=>t+x.pct,0)/s.length:0,n:s.length}}).filter(x=>x.n).sort((x,y)=>y.v-x.v);
+  $("#app").innerHTML=`
+   <div><h1>Production audit</h1><div class="muted">Production Safety League Program · Production site audit, marked 1 (Poor) to 5 (Excellent).</div></div>
+   <div class="tiles">
+     <div class="tile"><div class="k">This month</div><div class="v">${closed.filter(r=>(r.date||"").startsWith(ym)).length}</div></div>
+     <div class="tile"><div class="k">Average score</div><div class="v">${avg==null?"–":Math.round(avg)+"%"}</div></div>
+     <div class="tile"><div class="k">Drafts</div><div class="v">${arr.length-closed.length}</div></div>
+     <div class="tile"><div class="k">Total</div><div class="v">${closed.length}</div></div>
+   </div>
+   <section class="card viz"><div class="viz-h"><div><h3>Safety league · last 3 months</h3><p>Average production audit score by area · tap an area to see its audits</p></div><button class="small-btn" data-tbl>Table</button></div><div id="c_league" data-title="Safety league"></div></section>
+   <div class="toolbar"><input id="paq" type="search" placeholder="Search area, supervisor, activity…" value="${esc(paFilter.q)}" aria-label="Search production audits">
+     <select id="past" aria-label="Filter by status"><option value="all">All status</option><option value="draft">Draft</option><option value="closed">Submitted</option></select>
+     <button class="btn" id="btnPaCsv">Export CSV</button></div>
+   <div class="list">${!paLoaded?`<div class="empty">Loading production audits…</div>`:shown.length?shown.map(r=>{const s=paScore(r);return `
+     <button class="row" data-pa="${r.id}">
+       <div class="t">${esc(r.area||"Untitled area")} <span class="muted" style="font-weight:500">· ${esc(r.supervisor||"–")}</span></div>
+       <div class="r">${s.n?`<span class="pill pa-band b${Math.round(s.avg)}">${s.band}</span>`:""}<span class="pill ${r.status}">${r.status==="closed"?"Submitted":"Draft"}</span><span class="pct">${s.n?`${s.tot}/${PA_MAX}`:"–"}</span></div>
+       <div class="s">${fmtD(r.date)} · ${esc(r.activity||"")}${r.auditBy?` · by ${esc(r.auditBy)}`:""}</div>
+     </button>`}).join(""):`<div class="empty">${arr.length?"No production audits match.":"No production audits yet. Tap <b>+ New audit</b> to start one."}</div>`}</div>`;
+  barChart($("#c_league"),{cats:areas.map(x=>`${x.a} (${x.n})`),series:[{name:"Average score",color:"var(--s1)",values:areas.map(x=>Math.round(x.v))}],horizontal:true,fmt:v=>Math.round(v)+"%",empty:"No submitted production audits in the last 3 months",
+    onPick:i=>{paFilter={q:areas[i].a,st:"closed"};renderPa()}});
+  $("#past").value=paFilter.st;
+  $("#paq").oninput=e=>{paFilter.q=e.target.value;const pos=e.target.selectionStart;renderPa();const f=$("#paq");f.focus();f.setSelectionRange(pos,pos)};
+  $("#past").onchange=e=>{paFilter.st=e.target.value;renderPa()};
+  $("#btnPaCsv").onclick=exportPaCsv;
+  document.querySelector("[data-tbl]").onclick=e=>{const t=$("#c_league .viz-table");if(t){t.hidden=!t.hidden;e.target.textContent=t.hidden?"Table":"Chart only"}};
+  document.querySelectorAll("[data-pa]").forEach(b=>b.onclick=()=>{curPa=structuredClone(pas.get(b.dataset.pa));go(curPa.status==="closed"?"paview":"paedit")});
+}
+function paBody(r){const s=paScore(r);return `
+   <section class="card"><div class="card-h"><h2>General information</h2><span class="sc">Total ${s.tot}/${PA_MAX}${s.pct!=null?` · ${Math.round(s.pct)}%`:""}</span></div><div class="card-b"><div class="kv">
+     <div>Supervisor name</div><div>${esc(r.supervisor||"–")}</div>
+     <div>Area</div><div>${esc(r.area||"–")}</div>
+     <div>Date</div><div>${fmtD(r.date)}</div>
+     <div>Activity</div><div>${esc(r.activity||"–")}</div>
+     <div>Audit by (HSSE)</div><div>${esc(r.auditBy||"–")}</div>
+     <div>Total</div><div><b>${s.tot} / ${PA_MAX}</b>${s.pct!=null?` (${Math.round(s.pct)}%) · average mark ${s.avg.toFixed(1)} – ${s.band}`:""}</div>
+   </div></div></section>
+   ${PA_SECTIONS.map(sec=>{const p=s.per[sec.no];return `<section class="card"><div class="card-h"><h2>No. ${sec.no} · ${esc(sec.title)}</h2><span class="sc">${p.t} / ${p.max}</span></div><div class="card-b">
+     ${sec.qs.map(q=>{const m=r.marks?.[q.id]||{};return `<div class="rq"><div><span class="mono muted">${q.id}</span> ${esc(q.t)}</div><div>${paChip(m.v)}</div>
+       ${m.c?`<div class="c"><b>Comment:</b> ${esc(m.c)}</div>`:""}${m.p?.length?`<div class="c">${photosHTML(m.p,"",false)}</div>`:""}</div>`}).join("")}
+   </div></section>`}).join("")}
+   <section class="card"><div class="card-h"><h2>Marks</h2></div><div class="card-b" style="padding-top:10px"><div class="photos">${[5,4,3,2,1].map(v=>`<span class="mk mk${v}">${v} · ${PA_MARKS[v]}</span>`).join("")}</div></div></section>`}
+function paPdfArgs(r){const s=paScore(r);return {brand:"Production Site Audit",title:r.area||"Production area",sub:`Production Safety League Program · Octagon Maju Sdn Bhd · ${fmtD(r.date)}`,
+  right:`<div class="pdf-score">Total<b>${s.tot}/${PA_MAX}</b></div>`,body:paBody(r),footer:`Production Site Audit · ${r.area||""}`,filename:`Production-Audit-${slug(r.area)||"Area"}-${r.date}.pdf`}}
+function renderPaView(){
+  const r=curPa;if(!r){go("pa");return}const s=paScore(r);
+  $("#app").innerHTML=`<div class="rep-head"><div><h1>${esc(r.area||"Production audit")}</h1><div class="muted">Production site audit · ${fmtD(r.date)} · Supervisor ${esc(r.supervisor||"–")} · <b>${s.tot}/${PA_MAX}</b> (${s.band})</div>${driveChip("production",r.id)}</div>
+     <div class="toolbar"><button class="btn" id="paBack">All production audits</button><button class="btn" id="paEdit">Reopen & edit</button><button class="btn brand" id="paPdf">Download PDF</button></div></div>${paBody(r)}`;
+  hydratePhotos($("#app"));
+  $("#paBack").onclick=()=>go("pa");
+  $("#paEdit").onclick=()=>confirmBox("Reopen this production audit?","It returns to Draft until you submit it again.","Reopen",async()=>{curPa.status="draft";curPa.closedAt=null;await savePa(structuredClone(curPa));go("paedit")});
+  $("#paPdf").onclick=()=>makePdf({...paPdfArgs(r),btn:$("#paPdf")});
+}
+function paQHTML(q,m){const v=+(m.v||0);const low=v&&v<=2;const showC=low||m.c;
+  return `<div class="q ${low?"is-n":""}" data-paq="${q.id}">
+    <div class="q-top"><div class="q-text req"><span class="no">${q.id}</span>${esc(q.t)}</div></div>
+    <div class="ans marks" role="group" aria-label="Mark for ${q.id}">${[1,2,3,4,5].map(n=>`<button class="m${n}" data-mk="${n}" aria-pressed="${v===n}">${n}<small>${PA_MARKS[n]}</small></button>`).join("")}</div>
+    ${photosHTML(m.p,"pa:"+q.id,true)}
+    <div class="q-extra" ${showC?"":"hidden"}>${low?`<label class="lbl req" for="pc_${q.id}">Comment / corrective action</label>`:""}<textarea id="pc_${q.id}" data-pac="${q.id}" rows="2" placeholder="${low?"What was found and what must be done (required for marks 1–2)":"Comment"}">${esc(m.c||"")}</textarea></div>
+    <div class="q-tools"><button class="small-btn" data-paph="${q.id}">+ Photo</button>${showC?"":`<button class="small-btn" data-pashowc="${q.id}">+ Comment</button>`}</div></div>`}
+function renderPaEdit(){
+  const r=curPa;if(!r){go("pa");return}
+  const sugg=f=>[...new Set([...pas.values()].map(x=>x[f]).filter(Boolean))];
+  $("#app").innerHTML=`
+   <datalist id="dlPaSup">${[...new Set([...sugg("supervisor"),...ENGINEERS.filter(n=>n!=="Not Available")])].map(v=>`<option value="${esc(v)}">`).join("")}</datalist><datalist id="dlPaArea">${sugg("area").map(v=>`<option value="${esc(v)}">`).join("")}</datalist>
+   <div class="rep-head"><div><h1>Production site audit</h1><div class="muted">Production Safety League Program · Octagon Maju Sdn Bhd</div></div><span class="pill ${r.status}">${r.status==="closed"?"Submitted":"Draft"}</span></div>
+   <section class="card"><div class="card-h"><h2>General information</h2></div><div class="card-b"><div class="grid2">
+     <div class="fld"><label class="req" for="pa_sup">Supervisor name</label><input id="pa_sup" list="dlPaSup" value="${esc(r.supervisor)}"></div>
+     <div class="fld"><label class="req" for="pa_area">Area</label><input id="pa_area" list="dlPaArea" value="${esc(r.area)}" placeholder="e.g. Fabrication line 2"></div>
+     <div class="fld"><label class="req" for="pa_date">Date</label><input id="pa_date" type="date" value="${esc(r.date)}"></div>
+     <div class="fld"><label class="req" for="pa_by">Audit by (HSSE)</label><select id="pa_by"><option value="">Select auditor…</option>${[...AUDITORS,...(r.auditBy&&!AUDITORS.includes(r.auditBy)?[r.auditBy]:[])].map(n=>`<option ${n===r.auditBy?"selected":""}>${esc(n)}</option>`).join("")}</select></div>
+     <div class="fld full"><label class="req" for="pa_act">Activity</label><input id="pa_act" value="${esc(r.activity)}" placeholder="Work being done during the audit"></div>
+   </div></div></section>
+   ${PA_SECTIONS.map(sec=>`<section class="card"><div class="card-h"><h2>No. ${sec.no} · ${esc(sec.title)}</h2><span class="sc" data-pasc="${sec.no}"></span></div><div class="card-b">${sec.qs.map(q=>paQHTML(q,r.marks[q.id]||{})).join("")}</div></section>`).join("")}
+   <div class="toolbar">${r._new?"":`<button class="btn danger" id="pa_del">Delete</button>`}<span style="flex:1"></span></div>
+   <div class="scorebar"><div class="scorebar-in"><div class="meter"><div class="track"><div class="fill" id="pa_fill"></div></div><div class="lab" id="pa_lab"></div></div>
+     <div class="pct" id="pa_tot"></div><button class="btn" id="pa_draft">Save draft</button><button class="btn brand" id="pa_submit">Submit</button></div></div>
+   <input type="file" id="paFile" accept="image/*" multiple hidden>`;
+  const mk=id=>r.marks[id]||(r.marks[id]={});
+  const upd=()=>{const s=paScore(r);$("#pa_fill").style.width=(s.n/PA_ITEMS.length*100)+"%";$("#pa_lab").innerHTML=`<b>${s.n}/${PA_ITEMS.length}</b> marked${s.n?` · average ${s.avg.toFixed(1)} – ${s.band}`:""}`;
+    $("#pa_tot").textContent=`${s.tot}/${PA_MAX}`;PA_SECTIONS.forEach(sec=>{const p=s.per[sec.no];document.querySelector(`[data-pasc="${sec.no}"]`).textContent=`${p.t} / ${p.max}`})};
+  const read=()=>{r.supervisor=$("#pa_sup").value.trim();r.area=$("#pa_area").value.trim();r.date=$("#pa_date").value;r.auditBy=$("#pa_by").value;r.activity=$("#pa_act").value.trim()};
+  const bindQ=root=>{root.querySelectorAll("[data-pac]").forEach(t=>t.oninput=()=>{mk(t.dataset.pac).c=t.value;if(t.value.trim())t.classList.remove("c-missing")})};
+  const redrawQ=id=>{const el=document.querySelector(`[data-paq="${id}"]`);const tmp=document.createElement("div");tmp.innerHTML=paQHTML(PA_ITEMS.find(x=>x.id===id),r.marks[id]||{});const n=tmp.firstElementChild;el.replaceWith(n);hydratePhotos(n);bindQ(n);return n};
+  $("#app").onclick=async e=>{const b=e.target.closest("button");if(!b)return;
+    const qEl=b.closest("[data-paq]");
+    if(b.dataset.mk&&qEl){const id=qEl.dataset.paq;const m=mk(id);m.v=+m.v===+b.dataset.mk?0:+b.dataset.mk;const n=redrawQ(id);if(m.v&&m.v<=2&&!m.c)n.querySelector("textarea").focus();upd();return}
+    if(b.dataset.pashowc){const n=document.querySelector(`[data-paq="${b.dataset.pashowc}"]`);n.querySelector(".q-extra").hidden=false;n.querySelector("textarea").focus();b.remove();return}
+    if(b.dataset.paph){const id=b.dataset.paph;const inp=$("#paFile");inp.value="";inp.onchange=async()=>{const files=[...inp.files];for(const f of files){try{(mk(id).p=mk(id).p||[]).push(await storePhoto(f))}catch(x){toast("A photo could not be added")}}redrawQ(id)};inp.click();return}
+    if(b.dataset.rmph&&b.dataset.rmph.startsWith("pa:")){const id=b.dataset.rmph.slice(3);mk(id).p.splice(+b.dataset.i,1);redrawQ(id);return}
+    if(b.id==="pa_draft"){read();await doSave(false);return}
+    if(b.id==="pa_submit"){read();const s=paScore(r);const miss=[];
+      if(!r.supervisor)miss.push("Supervisor name");if(!r.area)miss.push("Area");if(!r.date)miss.push("Date");if(!r.auditBy)miss.push("Audit by (HSSE)");if(!r.activity)miss.push("Activity");
+      const un=PA_ITEMS.filter(q=>!+(r.marks[q.id]?.v));if(un.length)miss.push(`${un.length} item${un.length>1?"s":""} not marked`);
+      const lowNo=PA_ITEMS.filter(q=>{const m=r.marks[q.id];return m&&+m.v&&+m.v<=2&&!(m.c||"").trim()});if(lowNo.length)miss.push(`${lowNo.length} item${lowNo.length>1?"s":""} marked 1–2 without a comment`);
+      if(miss.length){infoBox("Complete the audit first",`<ul style="margin:0;padding-left:18px">${miss.map(m=>`<li>${esc(m)}</li>`).join("")}</ul>`);
+        un.forEach(q=>document.querySelector(`[data-paq="${q.id}"]`)?.classList.add("missing"));lowNo.forEach(q=>document.querySelector(`[data-paq="${q.id}"] textarea`)?.classList.add("c-missing"));
+        (un[0]&&document.querySelector(`[data-paq="${un[0].id}"]`)||document.querySelector(".card")).scrollIntoView({block:"center"});return}
+      confirmBox("Submit this production audit?",`Total <b>${s.tot} / ${PA_MAX}</b> (${Math.round(s.pct)}%) · average mark ${s.avg.toFixed(1)} – ${s.band}.`,"Submit",async()=>{r.status="closed";r.closedAt=new Date().toISOString();if(await doSave(true)){go("paview");toast("Production audit submitted");driveSend("production",r.id)}});return}
+    if(b.id==="pa_del"){confirmBox("Delete this production audit?","This removes it for everyone.","Delete",async()=>{pas.delete(r.id);try{if(mode==="shared")await db.collection("production").doc(r.id).delete();else await IDB.set("hsse-production",[...pas.values()])}catch(x){toast("Could not delete – check your access")}driveSend("production",r.id);curPa=null;go("pa");toast("Production audit deleted")});return}
+  };
+  const doSave=async quiet=>{const wasNew=r._new;delete r._new;r.updatedAt=new Date().toISOString();
+    try{await savePa(structuredClone(r));if(!quiet)toast("Draft saved");return true}catch(x){if(wasNew)r._new=true;toast(x?.code==="invalid_argument"?"You have view-only access – not saved":"Not saved – check connection");return false}};
+  bindQ($("#app"));hydratePhotos($("#app"));upd();
+}
+function exportPaCsv(){
+  const cols=["Date","Area","Supervisor","Activity","Audit by","Status","Total","Max","Score %","Rating",...PA_ITEMS.map(q=>q.id+" "+q.t)];const cell=v=>`"${String(v??"").replace(/"/g,'""')}"`;
+  const rows=[...pas.values()].sort((a,b)=>(a.date||"").localeCompare(b.date||"")).map(r=>{const s=paScore(r);return [r.date,r.area,r.supervisor,r.activity,r.auditBy,r.status==="closed"?"Submitted":"Draft",s.tot,PA_MAX,s.pct==null?"":s.pct.toFixed(1),s.band,...PA_ITEMS.map(q=>{const m=r.marks?.[q.id]||{};return (m.v||"")+(m.c?` – ${m.c}`:"")})]});
+  save(`production-audits-${localDT(new Date()).slice(0,10)}.csv`,[cols,...rows].map(r=>r.map(cell).join(",")).join("\r\n"));
 }
 /* ============ DASHBOARD ============ */
 let dashF={range:"90",from:"",to:"",who:""};
@@ -1438,6 +1595,7 @@ function renderDash(){
   const A=[...audits.values()].filter(a=>a.status==="closed"&&inR(a.conductedOn)&&(!who||a.auditBy===who));
   const T=[...tasks.values()].filter(t=>(inR(t.due)||(t.status!=="C"&&dashF.range!=="custom"&&t.due&&t.due<from))&&(!who||t.assignee===who));
   const B=[...tbs.values()].filter(t=>inR(t.date)&&(!who||t.briefBy===who||t.createdBy===who));
+  const P=[...pas.values()].filter(r=>r.status==="closed"&&inR(r.date)&&(!who||r.auditBy===who));
   const scores=A.map(a=>score(a)).filter(s=>s.pct!=null);
   const avg=scores.length?scores.reduce((s,x)=>s+x.pct,0)/scores.length:null;
   const ncTotal=A.reduce((s,a)=>s+score(a).n,0);
@@ -1445,10 +1603,10 @@ function renderDash(){
   const wk=Date.now()+7*864e5;const soon=[...tasks.values()].filter(t=>t.status!=="C"&&(!who||t.assignee===who)&&!isOverdue(t)&&dueDate(t)&&dueDate(t).getTime()<=wk);
   const drafts=[...audits.values()].filter(a=>a.status!=="closed").length;
   const rangeTxt={"30":"Last 30 days","90":"Last 3 months","365":"Last 12 months",year:"This year",all:"All time",custom:"Custom dates"}[dashF.range];
-  const people=[...new Set([...AUDITORS,...[...audits.values()].map(a=>a.auditBy),...[...tasks.values()].map(t=>t.assignee)].filter(Boolean))];
+  const people=[...new Set([...AUDITORS,...[...pas.values()].map(r=>r.auditBy),...[...audits.values()].map(a=>a.auditBy),...[...tasks.values()].map(t=>t.assignee)].filter(Boolean))];
   const kpi=(k,label,val,sub,go,cls="")=>`<button class="kpi ${cls}" data-go="${go}" aria-label="${esc(label)}: ${esc(String(val))}"><span class="kpi-l">${label}</span><span class="kpi-ring"><b>${val}</b></span><span class="kpi-s">${sub}</span></button>`;
   $("#app").innerHTML=`
-   <div class="dash-head"><div><h1>HSSE Dashboard</h1><div class="muted">Site audits, task updates and toolbox meetings · ${esc(rangeTxt)}${who?` · ${esc(who)}`:""}</div></div></div>
+   <div class="dash-head"><div><h1>HSSE Dashboard</h1><div class="muted">Site audits, task updates, toolbox meetings and production audits · ${esc(rangeTxt)}${who?` · ${esc(who)}`:""}</div></div></div>
    <div class="toolbar dash-filters">
      <select id="df_range" aria-label="Date range">${[["30","Last 30 days"],["90","Last 3 months"],["365","Last 12 months"],["year","This year"],["all","All time"],["custom","Custom dates…"]].map(([v,l])=>`<option value="${v}" ${dashF.range===v?"selected":""}>${l}</option>`).join("")}</select>
      <span id="df_custom" ${dashF.range==="custom"?"":"hidden"} class="df-custom"><input type="date" id="df_from" value="${esc(dashF.from)}" aria-label="From"><span>to</span><input type="date" id="df_to" value="${esc(dashF.to)}" aria-label="To"></span>
@@ -1466,20 +1624,24 @@ function renderDash(){
      ${kpi("soon","Due in 7 days",soon.length,soon.filter(t=>t.priority==="H").length?`${soon.filter(t=>t.priority==="H").length} high priority`:"open tasks","tasks:open",soon.length?"warn":"")}
    </div>
    <div class="dash-grid">
-     <section class="card viz wide"><div class="viz-h"><div><h3>Activity by month</h3><p>Submitted audits, toolbox meetings and tasks due each month</p></div><button class="small-btn" data-tbl>Table</button></div><div id="c_month" data-title="Activity by month"></div></section>
+     <section class="card viz wide"><div class="viz-h"><div><h3>Activity by month</h3><p>Submitted site audits, toolbox meetings, tasks due and production audits each month</p></div><button class="small-btn" data-tbl>Table</button></div><div id="c_month" data-title="Activity by month"></div></section>
      <section class="card viz"><div class="viz-h"><div><h3>Not comply findings by section</h3><p>Tap a bar to see the audits</p></div><button class="small-btn" data-tbl>Table</button></div><div id="c_nc" data-title="Not comply findings by section"></div></section>
      <section class="card viz"><div class="viz-h"><div><h3>Average audit score by client</h3><p>Comply ÷ (comply + not comply)</p></div><button class="small-btn" data-tbl>Table</button></div><div id="c_client" data-title="Average audit score by client"></div></section>
      <section class="card viz"><div class="viz-h"><div><h3>Tasks by priority</h3><p>Tap a segment to open those tasks</p></div><button class="small-btn" data-tbl>Table</button></div><div id="c_prio" data-title="Tasks by priority"></div></section>
      <section class="card viz"><div class="viz-h"><div><h3>Task leaderboard</h3><p>Tasks per person · tap to open their tasks</p></div><button class="small-btn" data-tbl>Table</button></div><div id="c_lead" data-title="Task leaderboard"></div></section>
+     <section class="card viz wide"><div class="viz-h"><div><h3>Production safety league</h3><p>Average production audit score by area · tap an area to see its audits</p></div><button class="small-btn" data-tbl>Table</button></div><div id="c_league_d" data-title="Production safety league"></div></section>
    </div>`;
   // months in range (max 12, ending at the latest month in range or now)
-  const allDates=[...A.map(a=>a.conductedOn),...B.map(t=>t.date),...T.map(t=>t.due)].filter(Boolean).map(d=>d.slice(0,7)).sort();
+  const allDates=[...P.map(r=>r.date),...A.map(a=>a.conductedOn),...B.map(t=>t.date),...T.map(t=>t.due)].filter(Boolean).map(d=>d.slice(0,7)).sort();
   let endM=localDT(new Date()).slice(0,7);if(dashF.range==="custom"&&dashF.to)endM=dashF.to.slice(0,7);
   let startM=from==="0000"?(allDates[0]||endM):from.slice(0,7);
   const months=[];{let [y,m]=startM.split("-").map(Number);const [ey,em]=endM.split("-").map(Number);while((y<ey||(y===ey&&m<=em))&&months.length<60){months.push(`${y}-${String(m).padStart(2,"0")}`);m++;if(m>12){m=1;y++}}}
   const ms=months.slice(-12);const mLabel=m=>new Date(+m.slice(0,4),+m.slice(5,7)-1,1).toLocaleDateString("en-GB",{month:"short",year:"2-digit"});
   const cnt=(arr,key)=>ms.map(m=>arr.filter(x=>(x[key]||"").startsWith(m)).length);
-  barChart($("#c_month"),{cats:ms.map(mLabel),series:[{name:"Site audits",color:SERIES.s1,values:cnt(A,"conductedOn")},{name:"Toolbox meetings",color:SERIES.s2,values:cnt(B,"date")},{name:"Tasks due",color:SERIES.s3,values:cnt(T,"due")}]});
+  barChart($("#c_month"),{cats:ms.map(mLabel),series:[{name:"Site audits",color:SERIES.s1,values:cnt(A,"conductedOn")},{name:"Toolbox meetings",color:SERIES.s2,values:cnt(B,"date")},{name:"Tasks due",color:SERIES.s3,values:cnt(T,"due")},{name:"Production audits",color:"var(--s4)",values:cnt(P,"date")}]});
+  const lg=[...new Set(P.map(r=>r.area).filter(Boolean))].map(a=>{const s=P.filter(r=>r.area===a).map(paScore).filter(x=>x.pct!=null);return {a,v:s.length?Math.round(s.reduce((t,x)=>t+x.pct,0)/s.length):0,n:s.length}}).filter(x=>x.n).sort((x,y)=>y.v-x.v).slice(0,10);
+  barChart($("#c_league_d"),{cats:lg.map(x=>`${x.a} (${x.n})`),series:[{name:"Average score",color:SERIES.s1,values:lg.map(x=>x.v)}],horizontal:true,fmt:v=>Math.round(v)+"%",empty:"No submitted production audits in this period",
+    onPick:i=>{paFilter={q:lg[i].a,st:"closed"};go("pa")}});
   // NC by section
   const nc=SECTIONS.map(s=>({s,n:A.reduce((t,a)=>t+s.qs.filter(q=>eff(a,q)==="N").length,0)})).filter(x=>x.n).sort((a,b)=>b.n-a.n).slice(0,8);
   barChart($("#c_nc"),{cats:nc.map(x=>x.s.title.replace("Machineries – ","")),series:[{name:"Not comply",color:SERIES.s1,values:nc.map(x=>x.n)}],horizontal:true,empty:"No not comply findings in this period",
@@ -1508,6 +1670,7 @@ function renderDash(){
 }
 /* ============ BOOT ============ */
 $("#btnNew").onclick=()=>{if(TABOF[view]==="tb"){curTb=newTb();go("tbedit");return}
+  if(TABOF[view]==="pa"){curPa=newPa();go("paedit");return}
   if(view==="tasks"||view==="task"){curTask=newTask();go("task");return}
   if(view==="form"&&dirty)saveNow();current=newAudit();audits.set(current.id,current);go("form");queueSave()};
 $("#btnHome").onclick=()=>go("list");
@@ -1515,6 +1678,6 @@ $("#btnDrive").onclick=()=>go("drive");
 window.addEventListener("beforeunload",()=>{if(dirty)saveNow()});
 document.querySelectorAll("[data-tab]").forEach(b=>b.onclick=()=>go(b.dataset.tab));
 $("#hdrLogo").src=LOGO;
-if(location.hash==="#tasks")go("tasks");else if(location.hash==="#tb")go("tb");else if(location.hash==="#audits")go("list");else go("dash");
+if(location.hash==="#tasks")go("tasks");else if(location.hash==="#tb")go("tb");else if(location.hash==="#audits")go("list");else if(location.hash==="#pa")go("pa");else go("dash");
 initCaps();
 </script>

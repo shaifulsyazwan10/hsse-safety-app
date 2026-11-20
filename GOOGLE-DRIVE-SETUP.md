@@ -8,9 +8,10 @@ The app at https://shaifulsyazwan10.github.io/hsse-safety-app/ uses one small Go
 ```
 My Drive/
 └── HSSE Safety/
-    ├── HSSE Safety Records        ← Google Sheet: "Site Audits", "Task Updates", "Toolbox Meetings", "Users"
+    ├── HSSE Safety Records        ← Google Sheet: "Site Audits", "Task Updates", "Toolbox Meetings", "Production Audits", "Users"
     ├── Site Audits/2026-11/2026-11-20 PS Karak/          ← PDF report + all photos
     ├── Toolbox Meetings/2026-11/2026-11-20 0800 Bay 2/   ← PDF + briefing photos
+    ├── Production Audits/2026-11/2026-11-20 Line 2/      ← PDF + item photos
     └── Task Updates/                                     ← (tasks are rows in the sheet)
 ```
 

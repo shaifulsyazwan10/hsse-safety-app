@@ -41,6 +41,9 @@ const findFolder=(t,name)=>{if(t.name===name)return t;for(const k of t.kids){con
  await p.evaluate(async()=>{const a={id:'aud1',status:'closed',closedAt:new Date().toISOString(),site:'PS Karak',client:'Shell',conductedOn:'2026-11-20',work:'Canopy light',auditBy:'Masitah',engineer:'Johan',contractor:'S&F',manpower:'4',
    answers:{wah1:{v:'Y'},wah2:{v:'N',c:'Ladder not tied'}},secOn:{wah:true},sharingPhotos:[],sectionPhotos:{},updatedAt:new Date().toISOString()};audits.set(a.id,a);await IDB.set('hsse-audits',[...audits.values()]);driveSend('audit','aud1')});
  await p.waitForTimeout(8000);s=await state();ok('Site audit: PDF folder + Sheet row with score and finding',!!findFolder(s.tree,'2026-11-20 PS Karak')&&rows(s,'Site Audits').includes('Ladder not tied'));
+ await p.evaluate(async()=>{const marks={};PA_ITEMS.forEach((q,i)=>marks[q.id]={v:i===3?2:4,c:i===3?'Cable loose':''});const r={id:'pa1',status:'closed',closedAt:new Date().toISOString(),supervisor:'Haziq Sr',area:'Line 2',date:'2026-11-20',activity:'Welding',auditBy:'Masitah',marks,updatedAt:new Date().toISOString()};
+   pas.set(r.id,r);await IDB.set('hsse-production',[...pas.values()]);driveSend('production','pa1')});
+ await p.waitForTimeout(8000);s=await state();ok('Production audit: PDF in Production Audits folder + Sheet row with total and low marks',!!findFolder(s.tree,'2026-11-20 Line 2')&&!!tab(s,'Production Audits')&&rows(s,'Production Audits').includes('Cable loose')&&rows(s,'Production Audits').includes('62'));
  // delete
  await p.click('[data-tab="tb"]');await p.click('.tbrow');await p.click('#tbEdit');await p.click('#tb_del');await p.click('#mOk');await p.waitForTimeout(4000);
  s=await state();ok('Delete marks the row Deleted and removes the folder',rows(s,'Toolbox Meetings').includes('Deleted')&&findFolder(s.tree,'Toolbox Meetings').kids[0].kids.length===0);

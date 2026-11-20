@@ -37,7 +37,7 @@ These came from direct requests — keep them when adding features:
 
 ## App structure (inside the HTML)
 
-Tabs: **Dashboard** (`dash`, the home page: filters for date range + person, 8 KPI rings, and five plain-SVG charts built by `barChart()` — activity by month, Not comply by section, average score by client, tasks by priority, task leaderboard; colours `--s1/--s2/--s3` = validated categorical slots blue/orange/aqua, each chart has hover tooltips, tap-to-filter and a Table view), **Site audits** (`list` / `form` / `report`), **Task updates** (`tasks` / `task`), **Toolbox meeting** (`tb` / `tbedit` / `tbview`). `go(view)` routes; `TABOF` maps views to tabs; `#btnNew` label changes per tab.
+Tabs: **Dashboard** (`dash`, the home page: filters for date range + person, 8 KPI rings, and five plain-SVG charts built by `barChart()` — activity by month, Not comply by section, average score by client, tasks by priority, task leaderboard; colours `--s1/--s2/--s3` = validated categorical slots blue/orange/aqua, each chart has hover tooltips, tap-to-filter and a Table view), **Site audits** (`list` / `form` / `report`), **Task updates** (`tasks` / `task`), **Toolbox meeting** (`tb` / `tbedit` / `tbview`), **Production audit** (`pa` / `paedit` / `paview`: the Production Safety League Program form from the user's Word sample — General information (supervisor, area, date, activity, audit by) and `PA_SECTIONS` = 6 sections / 16 items marked 1 Poor … 5 Excellent, total out of 80, marks 1–2 need a comment, per-item photos, Save draft / Submit, PDF, CSV, and a "Safety league" chart of average score by area). `go(view)` routes; `TABOF` maps views to tabs; `#btnNew` label changes per tab.
 
 Lists (edit these constants to change dropdowns):
 - `CLIENTS` – Petronas, Shell, BHP, Petron, Proton, Total Energies, MCD, Mitsubishi, EV, Honda
@@ -49,6 +49,7 @@ Lists (edit these constants to change dropdowns):
 Shared database collections (`db` capability; read/write from Claude with the `ArtifactData` tool):
 - `audits/<id>` – `{site, client, conductedOn (YYYY-MM-DD), work, auditBy, engineer, contractors[], contractor (joined), contractorOther, manpower, sharingPhotos[], sectionPhotos{}, secOn{sectionId:true|false}, answers{qid:{v:"Y"|"N"|"NA", c, x, p[]}}, sigAuditor, ackName, sigAck, status:"draft"|"closed", pct, nc, …}`
 - `tasks/<id>` – `{title, desc, assignee, priority:"H"|"M"|"L", status:"P"|"O"|"C", pct, start, due, dueTime, completedAt, log[{at,status,pct,note}]}`
+- `production/<id>` – `{supervisor, area, date, activity, auditBy, marks{'1.1':{v:1-5,c,p[]}}, status:'draft'|'closed', closedAt}`; `paScore(r)` gives total, %, average mark and band.
 - `toolbox/<id>` – `{briefBy, date, time, location, points[], topic (joined), photos[]}`
 - `photos/<id>` – fallback compressed photo data when asset upload isn't allowed. Photos are refs `{k:"a"|"d"|"i", id|data}`; assets serve at `/_blob/<id>`.
 

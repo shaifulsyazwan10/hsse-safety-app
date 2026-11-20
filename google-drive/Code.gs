@@ -19,7 +19,7 @@
  */
 const ROOT_NAME = 'HSSE Safety';
 const SHEET_NAME = 'HSSE Safety Records';
-const TYPES = { audit: 'Site Audits', task: 'Task Updates', toolbox: 'Toolbox Meetings' };
+const TYPES = { audit: 'Site Audits', task: 'Task Updates', toolbox: 'Toolbox Meetings', production: 'Production Audits' };
 const USERS_TAB = 'Users';
 const USER_COLS = ['Email', 'Name', 'Active', 'New password', 'Password hash', 'Last sign-in'];
 const START_USERS = [
