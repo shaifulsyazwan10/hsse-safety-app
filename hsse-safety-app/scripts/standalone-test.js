@@ -24,7 +24,7 @@ const bk=JSON.parse(fs.readFileSync(bpath));ok('Backup contains all records',bk.
 // second device: fresh context, restore
 const c2=await b.newContext({...devices['iPhone 13']});await c2.addInitScript(()=>{window.HSSE_DRIVE_TEST=true});const p2=await c2.newPage();await p2.goto('http://localhost:8766/');
 await p2.waitForSelector('#li_email');await p2.fill('#li_email','hsse10@octagonmaju.com.my');await p2.fill('#li_pw','Ridzuan2026');await p2.click('#li_go');await p2.waitForSelector('.tabs:not([hidden])');await p2.waitForTimeout(400);
-const [fc2]=await Promise.all([p2.waitForEvent('filechooser'),p2.click('#btnRestore')]);await fc2.setFiles(bpath);await p2.waitForTimeout(800);
+await p2.click('[data-tab="list"]');const [fc2]=await Promise.all([p2.waitForEvent('filechooser'),p2.click('#btnRestore')]);await fc2.setFiles(bpath);await p2.waitForTimeout(800);
 await p2.click('[data-tab="tb"]');ok('Restore on another device brings records over',(await p2.locator('.tbrow').count())===1);
 await p2.reload();await p2.waitForTimeout(600);await p2.click('[data-tab="tasks"]');ok('Restored records stay after reload',(await p2.locator('.task').count())===1);
 const [fc3]=await Promise.all([p2.waitForEvent('filechooser'),p2.click('[data-tab="list"]').then(()=>p2.click('#btnRestore'))]);fs.writeFileSync(QA+'/bad.json','{"x":1}');await fc3.setFiles(QA+'/bad.json');await p2.waitForTimeout(300);

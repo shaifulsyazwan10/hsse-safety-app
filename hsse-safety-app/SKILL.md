@@ -32,11 +32,12 @@ These came from direct requests — keep them when adding features:
 - **Colours:** brand dark blue `#00008B` (headers, buttons), safety yellow `#f2b300` accent, green comply, red not-comply. Priority: High red, Medium yellow, Low green.
 - **PDF downloads** (not HTML): A4, Octagon logo top-right (white background, no black), "… / Safety Department" top-left, no Form ID or Project rows, footer with page numbers. Built with html2canvas + jsPDF from cdnjs, one card per block (`makePdf()` helper).
 - Date-only for "Conducted on"; contractor is multi-select chips; Company in charge removed.
+- Header: white bar with the Octagon logo (`#hdrLogo` ← `LOGO`) + "HSSE Safety / Safety Department", then a dark-blue tab bar with a yellow underline (dashboard look requested from a reference screenshot).
 - Plain, short, task-focused UI copy. Malaysia context (MYT, Malay names, Petronas/Shell stations).
 
 ## App structure (inside the HTML)
 
-Tabs: **Site audits** (`list` / `form` / `report`), **Task updates** (`tasks` / `task`), **Toolbox meeting** (`tb` / `tbedit` / `tbview`). `go(view)` routes; `TABOF` maps views to tabs; `#btnNew` label changes per tab.
+Tabs: **Dashboard** (`dash`, the home page: filters for date range + person, 8 KPI rings, and five plain-SVG charts built by `barChart()` — activity by month, Not comply by section, average score by client, tasks by priority, task leaderboard; colours `--s1/--s2/--s3` = validated categorical slots blue/orange/aqua, each chart has hover tooltips, tap-to-filter and a Table view), **Site audits** (`list` / `form` / `report`), **Task updates** (`tasks` / `task`), **Toolbox meeting** (`tb` / `tbedit` / `tbview`). `go(view)` routes; `TABOF` maps views to tabs; `#btnNew` label changes per tab.
 
 Lists (edit these constants to change dropdowns):
 - `CLIENTS` – Petronas, Shell, BHP, Petron, Proton, Total Energies, MCD, Mitsubishi, EV, Honda
