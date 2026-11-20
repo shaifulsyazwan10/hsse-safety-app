@@ -1,36 +1,52 @@
-# Google Drive setup (one time, about 5 minutes)
+# Sign-in + Google Drive setup (one time, about 10 minutes)
 
-After this, every **submitted site audit**, **saved task** and **saved toolbox meeting** from the app at https://shaifulsyazwan10.github.io/hsse-safety-app/ is copied to the Google Drive of the account you use below:
+The app at https://shaifulsyazwan10.github.io/hsse-safety-app/ uses one small Google Apps Script, owned by the HSSE department's Google account, for two jobs:
+
+1. **Sign-in** – each team member signs in with an email and password that you manage in the **Users** tab of a Google Sheet.
+2. **Google Drive copy** – every submitted site audit, saved task and saved toolbox meeting is saved in that account's Drive:
 
 ```
 My Drive/
 └── HSSE Safety/
-    ├── HSSE Safety Records        ← Google Sheet: tabs "Site Audits", "Task Updates", "Toolbox Meetings"
+    ├── HSSE Safety Records        ← Google Sheet: "Site Audits", "Task Updates", "Toolbox Meetings", "Users"
     ├── Site Audits/2026-11/2026-11-20 PS Karak/          ← PDF report + all photos
     ├── Toolbox Meetings/2026-11/2026-11-20 0800 Bay 2/   ← PDF + briefing photos
     └── Task Updates/                                     ← (tasks are rows in the sheet)
 ```
 
-Saving a record again replaces its PDF and photos and updates its sheet row, so there are no duplicates. A deleted record is marked **Deleted** in the sheet and its folder goes to the Drive bin. Any tab can be downloaded as CSV (*File → Download → CSV*).
+Saving a record again replaces its PDF and photos and updates its sheet row (no duplicates). A deleted record is marked **Deleted** and its folder goes to the Drive bin. Each row shows **Saved by** (the person signed in). Any tab can be downloaded as CSV (*File → Download → CSV*).
+
+## A. Create the script (admin, once)
 
 Use the Google account that should own the files, for example the HSSE department account.
 
-1. Open https://script.google.com and click **New project**. Rename it `HSSE Safety Drive`.
-2. Delete everything in `Code.gs` and paste the contents of [`google-drive/Code.gs`](google-drive/Code.gs). Click **Save**.
-3. In the function list at the top choose **setup** and click **Run**. Allow the permissions it asks for (Drive and Sheets, for your own account).
-4. Open **Execution log**. Copy the line `Drive key (paste into the app > Drive): …`.
-5. Click **Deploy → New deployment** → type **Web app** →
-   - *Execute as:* **Me**
-   - *Who has access:* **Anyone**
+1. Open https://script.google.com → **New project** → rename it `HSSE Safety`.
+2. Delete everything in `Code.gs`, paste the contents of [`google-drive/Code.gs`](google-drive/Code.gs), click **Save**.
+3. At the top choose the function **setup** → **Run** → allow the permissions (Drive and Sheets, your own account).
+4. **Deploy → New deployment** → type **Web app** → *Execute as:* **Me** → *Who has access:* **Anyone** → **Deploy**. Copy the **Web app URL** (ends with `/exec`).
+5. Send that URL to Claude (or paste it into [`docs/drive-config.js`](docs/drive-config.js) as `window.HSSE_DRIVE_URL = "…/exec";` and commit). Then members only type email + password. If you skip this, each person pastes the URL once on the sign-in screen.
 
-   → **Deploy**, and copy the **Web app URL** (ends with `/exec`).
-6. On **each phone or computer** that uses the app: open the app, tap **Drive** at the top, paste the **Web app URL** and the **Drive key**, tap **Test connection**, then **Save**. The settings stay on that device.
-7. Optional: tap **Send all records to Google Drive** on a device to copy everything already saved on it.
+## B. Give each member a password (admin)
 
-Records saved before a device is set up wait on that device and upload as soon as step 6 is done there. Records saved with no signal upload when signal returns (keep the app open for a moment once you are back online).
+1. Open **My Drive → HSSE Safety → HSSE Safety Records → Users** tab. The three team members are already listed.
+2. For each person, type a **starting password** in the **New password** column (at least 8 characters). Make sure **Active** says **Yes**.
+3. Tell each person their starting password privately (WhatsApp/phone).
 
-"Who has access: Anyone" only means the app can reach the script without a Google sign-in; nothing is accepted without the Drive key. Give the key only to your team; it is kept in the app's storage on each device. If the key ever leaks, run `newKey` in the script and paste the new key into the app.
+When the person signs in, the script turns the password into a secure code in **Password hash** and clears **New password**, and the app asks them to choose their own password.
 
-**Updating the script later:** paste the new code, then *Deploy → Manage deployments → Edit (pencil) → Version: New version → Deploy*. The URL stays the same.
+| To… | Do this in the Users tab |
+|---|---|
+| Add a person | New row: Email, Name, Active = **Yes**, New password = starting password |
+| Reset a forgotten password | Type a new one in **New password** |
+| Block a person | Set **Active** to **No** (they are signed out at their next upload) |
+| Sign everyone out (lost phone) | In the script, run **signOutEveryone** |
 
-**Limits (free Google account):** a single upload can be up to about 50 MB (an audit with 25 photos is about 6 MB); Apps Script allows about 90 minutes of run time per day, roughly 1,000+ uploads.
+## C. On each phone (members)
+
+Open the app link → **Sign in** with email and password → change the starting password when asked. They stay signed in for 30 days and can work with no signal; uploads go through when signal returns. Tip: in Chrome/Safari choose **Add to Home Screen**.
+
+## Notes
+
+- "Who has access: Anyone" only lets the app reach the script without a Google sign-in. Nothing is saved or shown without a valid team sign-in, and passwords are never stored in readable form.
+- **Updating the script later:** paste the new code, then *Deploy → Manage deployments → Edit (pencil) → Version: New version → Deploy*. The URL stays the same.
+- **Limits (free Google account):** one upload up to about 50 MB (an audit with 25 photos is about 6 MB); about 90 minutes of script time per day, roughly 1,000+ uploads.

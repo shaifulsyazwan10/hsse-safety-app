@@ -227,6 +227,7 @@ h2{font-size:20px;text-transform:uppercase;letter-spacing:.05em}
 .notice.dev{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between}.notice.dev>div:first-child{flex:1 1 260px;min-width:0}
 .drivechip{display:block;font-size:13px;margin-top:4px;color:var(--ink-2)}.drivechip:empty{display:none}
 .drivechip.ok{color:var(--ok)}.drivechip.ok a{color:inherit;font-weight:700}.drivechip.wait{color:#b07a00}
+.login{max-width:440px;width:100%;margin:24px auto 0}
 .chips{display:flex;flex-wrap:wrap;gap:8px}
 .chipbtn{border:1px solid var(--line);background:var(--surface-2);border-radius:999px;padding:7px 13px;font-weight:600;font-size:14px;cursor:pointer;min-height:38px}
 .chipbtn[aria-pressed="true"]{background:var(--brand);color:var(--brand-ink);border-color:var(--brand)}
@@ -264,7 +265,7 @@ h2{font-size:20px;text-transform:uppercase;letter-spacing:.05em}
   <div class="sp"></div>
   <span class="save-state" id="saveState"></span>
   <button class="btn" id="btnHome" hidden>All audits</button>
-  <button class="btn" id="btnDrive" hidden title="Google Drive">Drive</button>
+  <button class="btn" id="btnDrive" hidden title="Account and Google Drive">Account</button>
   <button class="btn primary" id="btnNew">+ New audit</button>
 </div></header>
 
@@ -450,8 +451,11 @@ async function useLocal(){
   mode="local";db=null;
   const [A,T,B]=await Promise.all(["hsse-audits","hsse-tasks","hsse-toolbox"].map(devGet));
   audits=new Map((A||[]).map(a=>[a.id,a]));tasks=new Map((T||[]).map(t=>[t.id,t]));tbs=new Map((B||[]).map(t=>[t.id,t]));loaded=tasksLoaded=tbLoaded=true;
-  if(view==="list")renderList();if(view==="tasks")renderTasks();if(view==="tb")renderTb();
-  loadDrive();
+  await loadDrive();
+  if(needLogin()){showLogin();return}
+  showAccountButton();
+  if(view==="list")renderList();if(view==="tasks")renderTasks();if(view==="tb")renderTb();if(view==="drive")renderDrive();
+  processDriveQueue();
 }
 let saveChain=Promise.resolve(), saveTimer=null, dirty=false;
 function setSave(t,k){const s=$("#saveState");s.textContent=t;s.style.color=k==="bad"?"var(--hivis)":""}
@@ -514,6 +518,7 @@ function newAudit(){
     sharingPhotos:[],sectionPhotos:{},answers:{},sigAuditor:"",sigAck:"",ackName:"",closedAt:null};
 }
 function go(v,id){
+  if(driveLoaded&&needLogin()){showLogin();return}
   if(view==="form"&&dirty)saveNow();
   view=v;
   if(id!==undefined){const a=audits.get(id);current=a?structuredClone(a):null}
@@ -541,7 +546,7 @@ function renderList(){
   const q=listFilter.q.toLowerCase();
   const shown=arr.filter(a=>(listFilter.st==="all"||a.status===listFilter.st)&&(!q||[a.site,a.client,a.work,a.auditBy,a.contractor,a.formId].join(" ").toLowerCase().includes(q)));
   $("#app").innerHTML=`
-   ${mode==="local"&&loaded?`<div class="notice dev"><div><b>Records are saved on this phone or computer.</b> ${driveAvail()?(driveOn()?"Each submitted audit, task and toolbox meeting is also copied to Google Drive. ":"Tap <b>Drive</b> at the top to copy records to Google Drive. "):""}Use <b>Backup</b> / <b>Restore</b> to move records to another device.</div>
+   ${mode==="local"&&loaded?`<div class="notice dev"><div><b>Records are saved on this phone or computer${driveOn()?" and copied to the HSSE Google Drive":""}.</b> Use <b>Backup</b> / <b>Restore</b> to move records to another device.</div>
      <div class="toolbar"><button class="btn" id="btnBackup">Backup</button><button class="btn" id="btnRestore">Restore</button><input type="file" id="restoreIn" accept=".json,application/json" hidden></div></div>`:""}
    <div><h1>Site audits</h1><div class="muted">Inspection records for the HSSE Department. Tap an audit to view or continue it.</div></div>
    <div class="tiles">
@@ -1168,22 +1173,65 @@ function exportTbCsv(){
   save(`hsse-toolbox-${localDT(new Date()).slice(0,10)}.csv`,[cols,...rows].map(r=>r.map(cell).join(",")).join("\r\n"));
 }
 
-/* ============ GOOGLE DRIVE (GitHub address) ============ */
-// Outside claude.ai (the GitHub address) each submitted audit, saved task and saved toolbox meeting is sent to the
-// department's Google Apps Script, which files the PDF + photos in Drive and writes a row in the "HSSE Safety Records" sheet.
-// The script URL + key and the upload log are kept on each device (IndexedDB).
-let driveCfg=null, driveLog=new Map(), driveBusy=false, driveLoaded=false;
+/* ============ SIGN-IN + GOOGLE DRIVE (GitHub address) ============ */
+// Outside claude.ai, team members sign in with the email + password kept in the "Users" tab of the
+// department's Google Sheet (checked by the department's Apps Script). Records stay on each device, and each
+// submitted audit, saved task and saved toolbox meeting is copied to Google Drive by the same script.
+let driveUrl="", session=null, driveLog=new Map(), driveBusy=false, driveLoaded=false;
 const DTYPE={audit:"Site audit",task:"Task",toolbox:"Toolbox meeting"};
 function driveAvail(){return !window.claude}
-function driveOn(){return driveAvail()&&!!(driveCfg&&driveCfg.url&&driveCfg.key)}
+function sessionOk(){return !!(session&&session.token&&session.exp>Date.now())}
+function driveOn(){return driveAvail()&&!!driveUrl&&sessionOk()}
 async function loadDrive(){
   if(driveLoaded||!driveAvail())return;driveLoaded=true;
-  driveCfg=(await devGet("drive-settings"))||null;driveLog=new Map(Object.entries((await devGet("drive-log"))||{}));
-  $("#btnDrive").hidden=false;
+  driveUrl=(window.HSSE_DRIVE_URL||"").trim()||((await devGet("drive-url"))||"");
+  session=(await devGet("session"))||null;driveLog=new Map(Object.entries((await devGet("drive-log"))||{}));
   window.addEventListener("online",()=>processDriveQueue());setInterval(()=>processDriveQueue(),120000);
-  refreshDriveChips();processDriveQueue();
 }
-async function saveDriveLog(){try{await IDB.set("drive-log",Object.fromEntries(driveLog))}catch(e){lsSet("drive-log",Object.fromEntries(driveLog))}}
+async function devPut(k,v){try{await IDB.set(k,v)}catch(e){lsSet(k,v)}}
+async function saveDriveLog(){await devPut("drive-log",Object.fromEntries(driveLog))}
+function needLogin(){return driveAvail()&&!sessionOk()}
+function showAccountButton(){const b=$("#btnDrive");if(!b)return;b.hidden=!driveAvail()||!sessionOk();b.textContent="Account"}
+
+/* ----- sign-in screen ----- */
+function showLogin(msg){
+  document.querySelector(".tabs").hidden=true;$("#btnNew").hidden=true;$("#btnHome").hidden=true;$("#scorebar").hidden=true;$("#btnDrive").hidden=true;
+  const askUrl=!(window.HSSE_DRIVE_URL||"").trim();
+  $("#app").innerHTML=`<section class="card login"><div class="card-h"><h2>Sign in</h2></div><form class="card-b" id="loginForm" novalidate><div class="grid2">
+    <div class="fld full"><label for="li_email">Email</label><input id="li_email" type="email" autocomplete="username" inputmode="email" value="${esc(session?.email||"")}"></div>
+    <div class="fld full"><label for="li_pw">Password</label><input id="li_pw" type="password" autocomplete="current-password"></div>
+    ${askUrl?`<div class="fld full"><label for="li_url">Server link</label><input id="li_url" inputmode="url" value="${esc(driveUrl)}" placeholder="https://script.google.com/macros/s/…/exec"><span class="muted" style="font-size:13px">Ask your HSSE admin for this link. You only enter it once.</span></div>`:""}
+    <div class="fld full"><div class="warn" id="li_msg">${esc(msg||"")}</div></div>
+    <div class="toolbar"><button class="btn brand" type="submit" id="li_go">Sign in</button></div>
+    <div class="fld full muted" style="font-size:13px">Forgot your password? Ask your HSSE admin to set a new one for you.</div>
+  </div></form></section>`;
+  $("#loginForm").onsubmit=async e=>{e.preventDefault();
+    const em=$("#li_email").value.trim(),pw=$("#li_pw").value;const url=askUrl?$("#li_url").value.trim():driveUrl;
+    const m=t=>$("#li_msg").textContent=t;
+    if(!em||!pw){m("Enter your email and password.");return}
+    if(!urlOk(url)){m("The server link should start with https://script.google.com/macros/s/ and end with /exec");return}
+    if(!navigator.onLine){m("No internet connection. You need signal the first time you sign in.");return}
+    $("#li_go").disabled=true;m("Signing in…");
+    try{const j=await callServer(url,{type:"login",email:em,password:pw});
+      session={token:j.token,email:j.email,name:j.name,exp:j.exp};driveUrl=url;await devPut("session",session);if(askUrl)await devPut("drive-url",url);
+      $("#li_msg").textContent="";document.querySelector(".tabs").hidden=false;$("#btnNew").hidden=false;showAccountButton();
+      toast(`Signed in as ${j.name}`);
+      if(j.mustChange){go("drive");setTimeout(()=>{const x=$("#ac_msg");if(x)x.textContent="Please change the starting password your admin gave you."},50)}
+      else go(location.hash==="#tasks"?"tasks":location.hash==="#tb"?"tb":"list");
+      processDriveQueue();}
+    catch(err){m(err.message);const b=$("#li_go");if(b)b.disabled=false}};
+}
+const urlOk=u=>/^https:\/\/script\.google\.com\/(a\/[^/]+\/)?macros\/s\/[^/]+\/exec$/.test(u)||(!!window.HSSE_DRIVE_TEST&&/^https?:\/\//.test(u));
+async function callServer(url,payload){
+  let r;try{r=await fetch(url,{method:"POST",body:JSON.stringify(payload)})}catch(e){throw new Error("Could not reach the server – check your internet connection")}
+  let j;try{j=await r.json()}catch(e){throw new Error("The server link is not working – check it with your HSSE admin")}
+  if(!j.ok){const msg={"wrong login":"Email or password is not correct.","too many tries":"Too many wrong tries. Wait 15 minutes and try again.","signed out":"Please sign in again."}[j.error]||j.error||"The server did not accept the request";
+    const err=new Error(msg);err.code=j.error;throw err}
+  return j;
+}
+async function signOut(){if(dirty)await saveNow();session=null;await devPut("session",null);location.hash="";showLogin("You are signed out.")}
+
+/* ----- Drive upload ----- */
 const sheetSafe=v=>{v=v==null?"":v;return typeof v==="string"&&/^[=+\-@]/.test(v)?"'"+v:v};
 async function blobToB64(b){return new Promise((res,rej)=>{const f=new FileReader();f.onload=()=>res(String(f.result).split(",")[1]);f.onerror=rej;f.readAsDataURL(b)})}
 async function photoPayload(list){
@@ -1222,17 +1270,11 @@ async function buildDrivePayload(type,id){
   }
 }
 async function driveQueue(){try{return (await IDB.get("drive-queue"))||[]}catch(e){return lsGet("drive-queue")||[]}}
-async function driveQueueSet(q){try{await IDB.set("drive-queue",q)}catch(e){lsSet("drive-queue",q)}}
+async function driveQueueSet(q){await devPut("drive-queue",q)}
 async function driveSend(type,id){
   if(!driveAvail())return;
   const q=(await driveQueue()).filter(x=>!(x.type===type&&x.id===id));q.push({type,id,at:Date.now()});await driveQueueSet(q);
   refreshDriveChips();processDriveQueue();
-}
-async function postDrive(payload,cfg){
-  cfg=cfg||driveCfg;
-  let r;try{r=await fetch(cfg.url,{method:"POST",body:JSON.stringify({...payload,key:cfg.key})})}catch(e){throw new Error("Could not reach Google Drive – check the internet connection")}
-  let j;try{j=await r.json()}catch(e){throw new Error("The Drive link did not answer correctly – check the Web app URL in Drive settings")}
-  if(!j.ok)throw new Error(j.error==="bad key"?"The Drive key is wrong – check Drive settings":j.error||"Drive upload failed");return j;
 }
 async function processDriveQueue(){
   if(driveBusy||!driveOn()||!navigator.onLine)return;driveBusy=true;
@@ -1240,10 +1282,10 @@ async function processDriveQueue(){
     let q=await driveQueue();
     while(q.length){
       const it=q[0];let res,p;
-      try{p=await buildDrivePayload(it.type,it.id);res=await postDrive(p);
+      try{p=await buildDrivePayload(it.type,it.id);res=await callServer(driveUrl,{...p,token:session.token});
         driveLog.set(it.type+"_"+it.id,{at:new Date().toISOString(),pdfUrl:res.pdfUrl||"",folderUrl:res.folderUrl||"",sheetUrl:res.sheetUrl||"",deleted:!!p.deleted});await saveDriveLog();
         if(!p.deleted)toast(`${DTYPE[it.type]} saved to Google Drive`);}
-      catch(e){if(/key|URL/.test(e.message||""))toast(e.message);break}
+      catch(e){if(e.code==="signed out"){session=null;await devPut("session",null);showLogin("Your sign-in has ended. Please sign in again – your records are safe on this device.")}break}
       q=(await driveQueue()).filter(x=>!(x.type===it.type&&x.id===it.id&&x.at<=it.at));await driveQueueSet(q);
     }
   }finally{driveBusy=false;refreshDriveChips()}
@@ -1252,35 +1294,39 @@ function driveChip(type,id){if(!driveAvail())return "";return `<span class="driv
 async function refreshDriveChips(){
   const els=document.querySelectorAll("[data-drive]");if(!els.length)return;const q=await driveQueue();
   els.forEach(el=>{const k=el.dataset.drive;const log=driveLog.get(k);const waiting=q.some(x=>x.type+"_"+x.id===k);
-    if(waiting){el.className="drivechip wait";el.textContent=!driveOn()?"Waiting for Google Drive setup on this device":navigator.onLine?"Uploading to Google Drive…":"Will upload to Google Drive when there is signal";}
+    if(waiting){el.className="drivechip wait";el.textContent=navigator.onLine?"Uploading to Google Drive…":"Will upload to Google Drive when there is signal";}
     else if(log&&!log.deleted){el.className="drivechip ok";el.innerHTML=`Saved to Google Drive · ${esc(fmtDT(log.at))}${log.pdfUrl?` · <a href="${esc(log.pdfUrl)}" target="_blank" rel="noopener">Open PDF</a>`:log.sheetUrl?` · <a href="${esc(log.sheetUrl)}" target="_blank" rel="noopener">Open sheet</a>`:""}`}
     else{el.className="drivechip";el.textContent=""}});
 }
-function renderDrive(){
-  if(view!=="drive")return;const c=driveCfg||{};
-  $("#app").innerHTML=`<div><h1>Google Drive</h1><div class="muted">Submitted site audits, saved tasks and toolbox meetings from this phone or computer are copied to the department's Google Drive: PDFs and photos in folders, and every record as a row in the "HSSE Safety Records" Google Sheet. Set this up once on each device.</div></div>
-   <section class="card"><div class="card-h"><h2>Connection</h2><span class="sc">${driveOn()?"Connected":"Not set up"}</span></div><div class="card-b"><div class="grid2">
-     <div class="fld full"><label for="dr_url">Web app URL</label><input id="dr_url" value="${esc(c.url||"")}" placeholder="https://script.google.com/macros/s/…/exec" inputmode="url"></div>
-     <div class="fld full"><label for="dr_key">Drive key</label><input id="dr_key" value="${esc(c.key||"")}" placeholder="From the setup log in Apps Script"></div>
-     <div class="fld full"><div class="muted" id="dr_msg" style="font-size:14px"></div></div>
-     <div class="toolbar"><button class="btn" id="dr_test">Test connection</button><button class="btn brand" id="dr_save">Save</button></div>
-   </div></div></section>
-   <section class="card"><div class="card-h"><h2>Send existing records</h2></div><div class="card-b" style="padding-top:12px;display:flex;flex-direction:column;gap:10px">
-     <div class="muted">Copies every submitted audit, task and toolbox meeting saved on this device. Records already in Drive are updated, not duplicated.</div>
-     <div><button class="btn" id="dr_all" ${driveOn()?"":"disabled"}>Send all records to Google Drive</button></div><div id="dr_q" class="muted"></div></div></section>`;
+
+/* ----- Account screen ----- */
+async function renderDrive(){
+  if(view!=="drive")return;const q=await driveQueue();
+  $("#app").innerHTML=`<div><h1>Account</h1><div class="muted">Signed in as <b>${esc(session?.name||"")}</b> (${esc(session?.email||"")}). Records are saved on this device and copied to the HSSE Google Drive.</div></div>
+   <section class="card"><div class="card-h"><h2>Google Drive</h2><span class="sc">${q.length?`${q.length} waiting`:"Up to date"}</span></div><div class="card-b" style="padding-top:12px;display:flex;flex-direction:column;gap:10px">
+     <div class="muted">${q.length?`${q.length} record${q.length===1?"":"s"} waiting to upload. ${navigator.onLine?"Uploading now – keep the app open.":"They will upload when there is signal."}`:"Everything saved on this device has been copied to Google Drive."}</div>
+     <div class="toolbar"><button class="btn" id="dr_test">Check connection</button><button class="btn" id="dr_all">Send all records again</button></div>
+     <div class="muted" id="dr_msg" style="font-size:14px"></div></div></section>
+   <section class="card"><div class="card-h"><h2>Change password</h2></div><form class="card-b" id="pwForm" novalidate><div class="grid2">
+     <div class="fld full"><label for="ac_old">Current password</label><input id="ac_old" type="password" autocomplete="current-password"></div>
+     <div class="fld"><label for="ac_new">New password</label><input id="ac_new" type="password" autocomplete="new-password" placeholder="At least 8 characters"></div>
+     <div class="fld"><label for="ac_new2">Type it again</label><input id="ac_new2" type="password" autocomplete="new-password"></div>
+     <div class="fld full"><div class="warn" id="ac_msg"></div></div>
+     <div class="toolbar"><button class="btn brand" type="submit" id="ac_go">Change password</button></div></div></form></section>
+   <div class="toolbar"><button class="btn danger" id="ac_out">Sign out</button></div>`;
   const msg=t=>$("#dr_msg").textContent=t;
-  const read=()=>({url:$("#dr_url").value.trim(),key:$("#dr_key").value.trim()});
-  const urlOk=u=>/^https:\/\/script\.google\.com\/(a\/[^/]+\/)?macros\/s\/[^/]+\/exec$/.test(u)||window.HSSE_DRIVE_TEST;
-  $("#dr_test").onclick=async()=>{const v=read();if(!urlOk(v.url)){msg("The URL should start with https://script.google.com/macros/s/ and end with /exec");return}
-    msg("Testing…");try{const j=await postDrive({type:"ping"},v);$("#dr_msg").innerHTML=`Connected. <a href="${esc(j.folderUrl)}" target="_blank" rel="noopener">Open Drive folder</a> · <a href="${esc(j.sheetUrl)}" target="_blank" rel="noopener">Open sheet</a>`}
-    catch(e){msg(e.message||"Could not reach the Drive link")}};
-  $("#dr_save").onclick=async()=>{const v=read();if(!v.url||!v.key){msg("Fill in both the Web app URL and the Drive key");return}
-    if(!urlOk(v.url)){msg("The URL should start with https://script.google.com/macros/s/ and end with /exec");return}
-    try{await IDB.set("drive-settings",{...v,at:new Date().toISOString()})}catch(e){lsSet("drive-settings",v)}driveCfg=v;toast("Drive settings saved on this device");renderDrive();processDriveQueue()};
+  $("#dr_test").onclick=async()=>{msg("Checking…");try{const j=await callServer(driveUrl,{type:"ping",token:session.token});
+    $("#dr_msg").innerHTML=`Connected. <a href="${esc(j.folderUrl)}" target="_blank" rel="noopener">Open Drive folder</a> · <a href="${esc(j.sheetUrl)}" target="_blank" rel="noopener">Open sheet</a>`}catch(e){msg(e.message)}};
   $("#dr_all").onclick=async()=>{const q=await driveQueue();const now=Date.now();let n=0;
     const add=(type,id)=>{if(!q.some(x=>x.type===type&&x.id===id)){q.push({type,id,at:now});n++}};
     [...audits.values()].filter(a=>a.status==="closed").forEach(a=>add("audit",a.id));[...tasks.keys()].forEach(id=>add("task",id));[...tbs.keys()].forEach(id=>add("toolbox",id));
-    await driveQueueSet(q);$("#dr_q").textContent=`${n} record${n===1?"":"s"} added to the upload list. Keep this page open until they finish.`;processDriveQueue()};
+    await driveQueueSet(q);msg(`${n} record${n===1?"":"s"} added to the upload list. Keep this page open until they finish.`);processDriveQueue()};
+  $("#pwForm").onsubmit=async e=>{e.preventDefault();const m=t=>$("#ac_msg").textContent=t;
+    const o=$("#ac_old").value,n1=$("#ac_new").value,n2=$("#ac_new2").value;
+    if(!o||!n1){m("Fill in your current and new password.");return}if(n1.length<8){m("The new password must be at least 8 characters.");return}if(n1!==n2){m("The two new passwords are not the same.");return}
+    $("#ac_go").disabled=true;try{await callServer(driveUrl,{type:"password",token:session.token,old:o,password:n1});m("");["#ac_old","#ac_new","#ac_new2"].forEach(x=>$(x).value="");toast("Password changed")}
+    catch(err){m(err.message)}finally{$("#ac_go").disabled=false}};
+  $("#ac_out").onclick=()=>confirmBox("Sign out?","Records stay saved on this device. You need your email and password to sign in again.","Sign out",signOut);
 }
 /* ============ BOOT ============ */
 $("#btnNew").onclick=()=>{if(TABOF[view]==="tb"){curTb=newTb();go("tbedit");return}

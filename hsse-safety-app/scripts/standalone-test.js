@@ -1,12 +1,14 @@
 const {chromium,devices}=require('playwright');const fs=require('fs');const http=require('http');const path=require('path');
 const QA=__dirname,SP=path.resolve(QA,'..');const res=[];const ok=(n,c,i='')=>{res.push(c);console.log((c?'PASS ':'FAIL ')+n+(i?' — '+i:''))};
 const page=fs.readFileSync('/home/user/hsse-safety-app/docs/index.html');
-const srv=http.createServer((q,r)=>{if(q.url.startsWith('/firebase-config.js')){r.writeHead(200,{'content-type':'text/javascript'});return r.end('window.HSSE_FIREBASE=null;')}r.writeHead(200,{'content-type':'text/html'});r.end(fs.readFileSync('/home/user/hsse-safety-app/docs/index.html'))}).listen(8766);
+const srv=http.createServer((q,r)=>{if(q.url.startsWith('/drive-config.js')){r.writeHead(200,{'content-type':'text/javascript'});return r.end('window.HSSE_DRIVE_URL="http://127.0.0.1:8790/";')}r.writeHead(200,{'content-type':'text/html'});r.end(fs.readFileSync('/home/user/hsse-safety-app/docs/index.html'))}).listen(8766);
 (async()=>{const b=await chromium.launch();const ctx=await b.newContext({...devices['iPhone 13'],acceptDownloads:true});const p=await ctx.newPage();
 const errs=[];p.on('pageerror',e=>errs.push(e.message));
 await p.route(/cdnjs/,r=>r.fulfill({path:SP+'/node_modules/'+(r.request().url().includes('jspdf')?'jspdf/dist/jspdf.umd.min.js':'html2canvas/dist/html2canvas.min.js'),contentType:'text/javascript'}));
-await p.goto('http://localhost:8766/');await p.waitForTimeout(500);
-ok('Opens outside claude.ai with device-storage notice + Backup/Restore',await p.isVisible('#btnBackup'));
+await ctx.addInitScript(()=>{window.HSSE_DRIVE_TEST=true});await fetch('http://127.0.0.1:8790/admin?email=hsse10%40octagonmaju.com.my&v=Ridzuan123');
+const signIn=async pg=>{await pg.waitForSelector('#li_email');ok('Server link is built in: sign-in asks only email + password',!(await pg.isVisible('#li_url')));await pg.fill('#li_email','hsse10@octagonmaju.com.my');await pg.fill('#li_pw','Ridzuan123');await pg.click('#li_go');await pg.waitForSelector('.tabs:not([hidden])');await pg.waitForTimeout(400);if(await pg.isVisible('#ac_old')){await pg.fill('#ac_old','Ridzuan123');await pg.fill('#ac_new','Ridzuan2026');await pg.fill('#ac_new2','Ridzuan2026');await pg.click('#ac_go');await pg.waitForTimeout(500);await pg.click('[data-tab="list"]')}};
+await p.goto('http://localhost:8766/');await signIn(p);
+ok('After sign-in: device-storage notice + Backup/Restore',await p.isVisible('#btnBackup'));
 await p.click('[data-tab="tb"]');await p.click('#btnNew');await p.fill('#tb_by','Ridzuan');await p.fill('#tb_loc','Bay 1');await p.fill('[data-pt="0"]','Forklift traffic');
 const [fc]=await Promise.all([p.waitForEvent('filechooser'),p.click('#tb_add')]);await fc.setFiles([0,1,2,3,4,5].map(i=>QA+`/big${i}.jpg`));await p.waitForTimeout(5000);
 await p.click('#tb_save');await p.waitForTimeout(500);
@@ -20,7 +22,8 @@ await p.click('[data-tab="tasks"]');ok('Task survives reload',(await p.locator('
 await p.click('[data-tab="list"]');[dl]=await Promise.all([p.waitForEvent('download'),p.click('#btnBackup')]);const bpath=QA+'/backup.json';await dl.saveAs(bpath);
 const bk=JSON.parse(fs.readFileSync(bpath));ok('Backup contains all records',bk.tasks.length===1&&bk.toolbox.length===1,`${Math.round(fs.statSync(bpath).size/1024)} KB`);
 // second device: fresh context, restore
-const c2=await b.newContext({...devices['iPhone 13']});const p2=await c2.newPage();await p2.goto('http://localhost:8766/');await p2.waitForTimeout(500);
+const c2=await b.newContext({...devices['iPhone 13']});await c2.addInitScript(()=>{window.HSSE_DRIVE_TEST=true});const p2=await c2.newPage();await p2.goto('http://localhost:8766/');
+await p2.waitForSelector('#li_email');await p2.fill('#li_email','hsse10@octagonmaju.com.my');await p2.fill('#li_pw','Ridzuan2026');await p2.click('#li_go');await p2.waitForSelector('.tabs:not([hidden])');await p2.waitForTimeout(400);
 const [fc2]=await Promise.all([p2.waitForEvent('filechooser'),p2.click('#btnRestore')]);await fc2.setFiles(bpath);await p2.waitForTimeout(800);
 await p2.click('[data-tab="tb"]');ok('Restore on another device brings records over',(await p2.locator('.tbrow').count())===1);
 await p2.reload();await p2.waitForTimeout(600);await p2.click('[data-tab="tasks"]');ok('Restored records stay after reload',(await p2.locator('.task').count())===1);

@@ -21,21 +21,32 @@ function SS(name){const x={id:newId(),name,tabs:[Sheet('Sheet1')]};sheets.set(x.
   return wrapSS(x)}
 function wrapSS(x){return {getId:()=>x.id,getUrl:()=>'https://docs.google.com/spreadsheets/d/'+x.id,getSheetByName:n=>x.tabs.find(t=>t.name===n)||null,
   insertSheet:n=>{const t=Sheet(n);x.tabs.push(t);return t},getSheets:()=>x.tabs,deleteSheet:t=>{x.tabs=x.tabs.filter(y=>y!==t)},_raw:x}}
-const props=new Map();
+const props=new Map();const cache=new Map();
 const ctx={
   PropertiesService:{getScriptProperties:()=>({getProperty:k=>props.get(k)??null,setProperty:(k,v)=>props.set(k,v),deleteProperty:k=>props.delete(k)})},
   DriveApp:{getRootFolder:()=>rootF,getFolderById:id=>{const f=folders.get(id);if(!f)throw new Error('no folder');return wrapF(f)},getFileById:id=>{const f=files.get(id);if(!f)throw new Error('no file');return wrapFile(f)}},
   SpreadsheetApp:{create:n=>SS(n),openById:id=>wrapSS(sheets.get(id))},
-  Utilities:{getUuid:()=>require('crypto').randomUUID(),base64Decode:s=>Buffer.from(s,'base64'),newBlob:(bytes,type,name)=>({bytes,type,name})},
+  Utilities:{getUuid:()=>require('crypto').randomUUID(),base64Decode:s=>Buffer.from(s,'base64'),
+    newBlob:(bytes,type,name)=>({bytes,type,name,getDataAsString:()=>Buffer.from(bytes).toString('utf8')}),
+    DigestAlgorithm:{SHA_256:'sha256'},Charset:{UTF_8:'utf8'},
+    computeDigest:(alg,v)=>[...require('crypto').createHash('sha256').update(typeof v==='string'?Buffer.from(v,'utf8'):Buffer.from(v.map(b=>b&255))).digest()].map(b=>b>127?b-256:b),
+    computeHmacSha256Signature:(v,k)=>[...require('crypto').createHmac('sha256',k).update(v).digest()].map(b=>b>127?b-256:b),
+    base64Encode:a=>Buffer.from(a.map(b=>b&255)).toString('base64'),
+    base64EncodeWebSafe:a=>(typeof a==='string'?Buffer.from(a,'utf8'):Buffer.from(a.map(b=>b&255))).toString('base64').replace(/\+/g,'-').replace(/\//g,'_'),
+    base64DecodeWebSafe:s=>[...Buffer.from(s.replace(/-/g,'+').replace(/_/g,'/'),'base64')]},
+  CacheService:{getScriptCache:()=>({get:k=>cache.get(k)??null,put:(k,v)=>cache.set(k,v),remove:k=>cache.delete(k)})},
   ContentService:{createTextOutput:t=>({text:t,setMimeType(){return this}}),MimeType:{JSON:'json'}},
   LockService:{getScriptLock:()=>({waitLock:()=>{},releaseLock:()=>{}})},
   Logger:{log:m=>console.log('[gas] '+m)},console
 };
 vm.createContext(ctx);vm.runInContext(fs.readFileSync(process.argv[2],'utf8'),ctx);
 ctx.setup();
-fs.writeFileSync(process.argv[3],props.get('KEY'));
+fs.writeFileSync(process.argv[3],'users');
 http.createServer((q,r)=>{const h={'access-control-allow-origin':'*','content-type':'application/json'};
   if(q.method==='OPTIONS'){r.writeHead(204,h);return r.end()}
+  if(q.url.startsWith('/admin?')){const u=new URL('http://x'+q.url);const ss=[...sheets.values()][0];const t=ss.tabs.find(x=>x.name==='Users');
+    const i=t.rows.findIndex(r=>String(r[0]).toLowerCase()===u.searchParams.get('email'));const col=t.rows[0].indexOf(u.searchParams.get('col')||'New password');
+    if(i<0){t.rows.push([u.searchParams.get('email'),u.searchParams.get('name')||'X','Yes']);}const row=t.rows[i<0?t.rows.length-1:i];row[col]=u.searchParams.get('v');cache.clear();r.writeHead(200,h);return r.end('{"ok":true}')}
   if(q.url==='/state'){r.writeHead(200,h);const tree=f=>({name:f.name,trashed:f.trashed,files:f.files.filter(x=>!x.trashed).map(x=>x.name+' ('+x.size+')'),kids:f.kids.filter(k=>!k.trashed).map(tree)});
     const ss=[...sheets.values()][0];return r.end(JSON.stringify({tree:tree(rootF._raw),tabs:ss.tabs.map(t=>({name:t.name,rows:t.rows}))}))}
   let b='';q.on('data',d=>b+=d);q.on('end',()=>{try{const o=ctx.doPost({postData:{contents:b}});r.writeHead(200,h);r.end(o.text)}catch(e){r.writeHead(500,h);r.end(JSON.stringify({ok:false,error:String(e)}))}})

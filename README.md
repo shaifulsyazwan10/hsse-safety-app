@@ -7,5 +7,5 @@ Claude skill for building, updating and extending the HSSE Safety Department app
 
 ## Live app
 
-- **GitHub Pages:** https://shaifulsyazwan10.github.io/hsse-safety-app/ (from `docs/index.html`). No sign-in. Records are saved on each phone or computer, and every submitted site audit, saved task and saved toolbox meeting is copied to the department's Google Drive: PDFs and photos in folders by month, plus the **HSSE Safety Records** Google Sheet with one row per record. Setup: [GOOGLE-DRIVE-SETUP.md](GOOGLE-DRIVE-SETUP.md). **Backup** / **Restore** in the app move records between devices.
+- **GitHub Pages:** https://shaifulsyazwan10.github.io/hsse-safety-app/ (from `docs/index.html`). Each team member signs in with their own email and password (managed in the **Users** tab of the HSSE Google Sheet). Records are saved on the phone, and every submitted site audit, saved task and saved toolbox meeting is copied to the department's Google Drive: PDFs and photos in folders by month, plus the **HSSE Safety Records** Google Sheet with one row per record and who saved it. Setup: [GOOGLE-DRIVE-SETUP.md](GOOGLE-DRIVE-SETUP.md).
 - **claude.ai:** https://claude.ai/artifact/ArdGTfN88sBMYUmodk6uK1. Records are shared by the whole team inside the app (share it as Contributor from the Share menu). claude.ai blocks the Google Drive copy.
