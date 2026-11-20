@@ -1487,10 +1487,10 @@ function renderPaEdit(){
   const r=curPa;if(!r){go("pa");return}
   const sugg=f=>[...new Set([...pas.values()].map(x=>x[f]).filter(Boolean))];
   $("#app").innerHTML=`
-   <datalist id="dlPaSup">${[...new Set([...sugg("supervisor"),...ENGINEERS.filter(n=>n!=="Not Available")])].map(v=>`<option value="${esc(v)}">`).join("")}</datalist><datalist id="dlPaArea">${sugg("area").map(v=>`<option value="${esc(v)}">`).join("")}</datalist>
+   <datalist id="dlPaArea">${sugg("area").map(v=>`<option value="${esc(v)}">`).join("")}</datalist>
    <div class="rep-head"><div><h1>Production site audit</h1><div class="muted">Production Safety League Program · Octagon Maju Sdn Bhd</div></div><span class="pill ${r.status}">${r.status==="closed"?"Submitted":"Draft"}</span></div>
    <section class="card"><div class="card-h"><h2>General information</h2></div><div class="card-b"><div class="grid2">
-     <div class="fld"><label class="req" for="pa_sup">Supervisor name</label><input id="pa_sup" list="dlPaSup" value="${esc(r.supervisor)}"></div>
+     <div class="fld"><label class="req" for="pa_sup">Supervisor name</label><input id="pa_sup" value="${esc(r.supervisor)}" placeholder="Type the supervisor's name" autocomplete="off"></div>
      <div class="fld"><label class="req" for="pa_area">Area</label><input id="pa_area" list="dlPaArea" value="${esc(r.area)}" placeholder="e.g. Fabrication line 2"></div>
      <div class="fld"><label class="req" for="pa_date">Date</label><input id="pa_date" type="date" value="${esc(r.date)}"></div>
      <div class="fld"><label class="req" for="pa_by">Audit by (HSSE)</label><select id="pa_by"><option value="">Select auditor…</option>${[...AUDITORS,...(r.auditBy&&!AUDITORS.includes(r.auditBy)?[r.auditBy]:[])].map(n=>`<option ${n===r.auditBy?"selected":""}>${esc(n)}</option>`).join("")}</select></div>

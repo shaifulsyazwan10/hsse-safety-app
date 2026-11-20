@@ -6,7 +6,7 @@ const body=`
  ok('Form has 6 sections and 16 items marked 1–5',(await p.locator('[data-paq]').count())===16&&(await p.locator('[data-paq="1.1"] [data-mk]').count())===5);
  await p.click('#pa_submit');let m=await p.textContent('#modal');ok('Empty form cannot be submitted',m.includes('Supervisor name')&&m.includes('16 items not marked'),m.slice(0,160));await p.click('#mOk');
  ok('Unmarked items are highlighted',(await p.locator('[data-paq].missing').count())===16);
- await p.fill('#pa_sup','Haziq Sr');await p.fill('#pa_area','Fabrication line 2');await p.selectOption('#pa_by','Masitah');await p.fill('#pa_act','Welding bracket');
+ await p.fill('#pa_sup','Haziq Sr');ok('Supervisor name is a plain text box (no list)',(await p.getAttribute('#pa_sup','list'))===null);await p.fill('#pa_area','Fabrication line 2');await p.selectOption('#pa_by','Masitah');await p.fill('#pa_act','Welding bracket');
  const ids=await p.$$eval('[data-paq]',e=>e.map(x=>x.dataset.paq));const marks=[5,4,4,3,5,2,4,5,4,3,5,4,5,1,4,5];
  for(const [i,id] of ids.entries())await p.click(\`[data-paq="\${id}"] [data-mk="\${marks[i]}"]\`);
  ok('Live total = sum of marks',(await p.textContent('#pa_tot'))===\`\${marks.reduce((a,b)=>a+b,0)}/80\`,await p.textContent('#pa_tot'));
