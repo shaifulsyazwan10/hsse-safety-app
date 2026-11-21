@@ -1693,13 +1693,13 @@ function renderDash(){
      ${kpi("soon","Due in 7 days",soon.length,soon.filter(t=>t.priority==="H").length?`${soon.filter(t=>t.priority==="H").length} high priority`:"open tasks","tasks:open",soon.length?"warn":"")}
    </div>
    <div class="dash-grid">
+     <section class="card viz wide" id="newsCard"></section>
      <section class="card viz wide"><div class="viz-h"><div><h3>Activity by month</h3><p>Submitted site audits, toolbox meetings, tasks due and production audits each month</p></div><button class="small-btn" data-tbl>Table</button></div><div id="c_month" data-title="Activity by month"></div></section>
      <section class="card viz"><div class="viz-h"><div><h3>Not comply findings by section</h3><p>Tap a bar to see the audits</p></div><button class="small-btn" data-tbl>Table</button></div><div id="c_nc" data-title="Not comply findings by section"></div></section>
      <section class="card viz"><div class="viz-h"><div><h3>Average audit score by client</h3><p>Comply ÷ (comply + not comply)</p></div><button class="small-btn" data-tbl>Table</button></div><div id="c_client" data-title="Average audit score by client"></div></section>
      <section class="card viz"><div class="viz-h"><div><h3>Tasks by priority</h3><p>Tap a segment to open those tasks</p></div><button class="small-btn" data-tbl>Table</button></div><div id="c_prio" data-title="Tasks by priority"></div></section>
      <section class="card viz"><div class="viz-h"><div><h3>Task leaderboard</h3><p>Tasks per person · tap to open their tasks</p></div><button class="small-btn" data-tbl>Table</button></div><div id="c_lead" data-title="Task leaderboard"></div></section>
      <section class="card viz wide"><div class="viz-h"><div><h3>Production safety league</h3><p>Average production audit score by area · tap an area to see its audits</p></div><button class="small-btn" data-tbl>Table</button></div><div id="c_league_d" data-title="Production safety league"></div></section>
-     <section class="card viz wide" id="newsCard"></section>
    </div>`;
   renderNewsCard();loadNews(false);
   // months in range (max 12, ending at the latest month in range or now)

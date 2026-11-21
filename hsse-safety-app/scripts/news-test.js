@@ -24,7 +24,7 @@ const srv=http.createServer((q,r)=>{if(q.url.startsWith('/drive-config.js')){r.w
    await c.setOffline(true);await c2p.evaluate(()=>{news={items:[],updated:"",state:"idle",err:""};newsAsked=0;loadNews(true)});await c2p.waitForTimeout(1500);
    ok('No signal: last saved news still shown',(await c2p.locator('.news li').count())===6&&(await c2p.textContent('#newsCard')).includes('No internet'));
    await c.setOffline(false);
-  } else await p.locator('#newsCard').screenshot({path:QA+'/news-card.png'});
+  } else {ok('News is the first card after the counters',await p.evaluate(()=>document.querySelector('.dash-grid').firstElementChild.id==='newsCard'));await p.screenshot({path:QA+'/news-top.png'})}
  }
  ok('No script errors',errs.length===0,errs.slice(0,2).join('|'));
  console.log(`${res.filter(Boolean).length}/${res.length} passed`);await b.close();srv.close()})().catch(e=>{console.error('CRASH',e);process.exit(1)});
