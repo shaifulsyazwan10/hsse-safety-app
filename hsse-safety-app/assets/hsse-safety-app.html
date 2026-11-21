@@ -1592,12 +1592,12 @@ function renderNewsCard(){
   else body=`<ul class="news">${shown.map(n=>`<li><a href="${esc(n.link)}" target="_blank" rel="noopener noreferrer">${esc(n.title)}</a>
      <div class="news-meta"><span class="news-cat c-${esc(String(n.cat).replace(/[^A-Za-z]/g,""))}">${esc((NEWS_CATS.find(c=>c[0]===n.cat)||[0,n.cat])[1])}</span>${n.source?`<span>${esc(n.source)}</span>`:""}<span>${esc(newsAgo(n.date))}</span></div></li>`).join("")}</ul>
      ${list.length>8?`<button class="small-btn" id="news_more">${newsMore?"Show fewer":`Show ${Math.min(40,list.length)-8} more`}</button>`:""}`;
-  el.innerHTML=`<div class="viz-h"><div><h3>Safety &amp; health news · Malaysia</h3><p>DOSH, DOE, workplace accidents and safety &amp; health news, updated every day${news.updated?` · last update ${esc(newsAgo(news.updated).toLowerCase())}`:""}</p></div>
+  el.innerHTML=`<div class="viz-h"><div><h3>Safety &amp; Health News</h3></div>
     ${driveAvail()&&driveOn()?`<button class="small-btn" id="news_ref" ${news.state==="loading"?"disabled":""}>${news.state==="loading"?"Refreshing…":"Refresh"}</button>`:""}</div>
     ${news.err?`<div class="warn">${esc(news.err)}</div>`:""}
     ${news.items.length?`<div class="chips">${NEWS_CATS.map(([k,l])=>`<button class="chipbtn" data-ncat="${esc(k)}" aria-pressed="${newsCat===k}">${l} · ${cnt(k)}</button>`).join("")}</div>`:""}
     ${body}
-    <div class="muted" style="font-size:12px">Headlines from Google News (English and Malay). Tap a headline to read the full story on the news website.</div>`;
+    <div class="muted" style="font-size:12px">Headlines from Google News (English and Malay)${news.updated?` · last update ${esc(newsAgo(news.updated).toLowerCase())}`:""}. Tap a headline to read the full story on the news website.</div>`;
   el.querySelectorAll("[data-ncat]").forEach(b=>b.onclick=()=>{newsCat=b.dataset.ncat;newsMore=false;renderNewsCard()});
   if($("#news_more"))$("#news_more").onclick=()=>{newsMore=!newsMore;renderNewsCard()};
   if($("#news_ref"))$("#news_ref").onclick=()=>loadNews(true);
