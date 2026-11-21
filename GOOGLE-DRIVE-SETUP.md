@@ -5,7 +5,7 @@ The app at https://shaifulsyazwan10.github.io/hsse-safety-app/ uses one small Go
 1. **Sign-in** – each team member signs in with an email and password that you manage in the **Users** tab of a Google Sheet.
 2. **Google Drive copy** – every submitted site audit, saved task and saved toolbox meeting is saved in that account's Drive:
 
-3. **Sync between phones and computers** – every saved task, toolbox meeting, submitted site audit and submitted production audit is also stored in the hidden **Data** tab, so every device that signs in sees the same records (photos are read back from Drive). Drafts stay on the device where they were started.
+3. **Sync between phones and computers** – every saved task, toolbox meeting, submitted site audit and submitted production audit is also stored in the hidden **Data** tab, so every device that signs in sees the same records (photos are read back from Drive). Drafts stay on the device where they were started. The weekly **Movement planning** syncs the same way; only the accounts in `MOVEMENT_EDITORS` (at the top of the script, Shaiful by default) can change it — the script refuses changes from anyone else.
 4. **Daily news** – every day at 6 AM (Malaysia time) the script collects the latest DOSH / JKKP, DOE / JAS, workplace-accident and safety & health news in Malaysia from Google News (English and Malay) into the **News** tab. The dashboard shows it under **Safety & Health News**.
 
 ```

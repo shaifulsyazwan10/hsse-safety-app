@@ -33,6 +33,7 @@ const START_USERS = [
   ['hsse10@octagonmaju.com.my', 'Ridzuan']
 ];
 const SESSION_DAYS = 30;
+const MOVEMENT_EDITORS = ['shaifulsyazwan@octagonmaju.com.my']; // who can change the Movement planning
 
 function setup() {
   const props = PropertiesService.getScriptProperties();
@@ -71,6 +72,13 @@ function doPost(e) {
     if (p.type === 'news') { lock.waitLock(60000); locked = true; return out_(news_(!!p.force)); }
     const root = root_();
     if (p.type === 'ping') return out_({ ok: true, name: who.name, folderUrl: root.getUrl(), sheetUrl: ss.getUrl() });
+    if (p.type === 'movement') {
+      // weekly HSSE team movement planning: everyone can read it through sync, only these accounts can change it
+      if (MOVEMENT_EDITORS.indexOf(who.email) < 0) return out_({ ok: false, error: 'Only the HSSE manager can update the movement planning' });
+      lock.waitLock(60000); locked = true;
+      saveData_(ss, 'movement', String(p.id), !!p.deleted, p.deleted ? null : (p.record || null), '', '');
+      return out_({ ok: true });
+    }
     if (!TYPES[p.type] || !p.id) return out_({ ok: false, error: 'bad request' });
 
     lock.waitLock(60000); locked = true;

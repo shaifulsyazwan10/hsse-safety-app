@@ -1,0 +1,44 @@
+const {chromium,devices}=require('playwright');const fs=require('fs');const http=require('http');const path=require('path');
+const QA=__dirname,SP=path.resolve(QA,'..');const res=[];const ok=(n,c,i='')=>{res.push(!!c);console.log((c?'PASS ':'FAIL ')+n+(i?' — '+i:''))};
+const GAS='http://127.0.0.1:8790/';const XL='/tmp/claude-0/-home-user-hsse-safety-app/fdfedc96-6536-5042-81f9-a8e7aef3a988/scratchpad/xlsx/mp.xlsx';
+const srv=http.createServer((q,r)=>{if(q.url.startsWith('/drive-config.js')){r.writeHead(200,{'content-type':'text/javascript'});return r.end('window.HSSE_DRIVE_URL="'+GAS+'";')}
+  r.writeHead(200,{'content-type':'text/html'});r.end(fs.readFileSync('/home/user/hsse-safety-app/docs/index.html'))}).listen(8775);
+(async()=>{await fetch(GAS+'admin?email=shaifulsyazwan%40octagonmaju.com.my&v=Start1234');await fetch(GAS+'admin?email=hsse7%40octagonmaju.com.my&v=Masitah123');
+ const b=await chromium.launch();const errs=[];
+ const dev=async(opt,em,pw)=>{const c=await b.newContext({...opt,acceptDownloads:true});await c.addInitScript(()=>{window.HSSE_DRIVE_TEST=true});const p=await c.newPage();p.on('pageerror',e=>errs.push(e.message));
+   await p.route(/cdnjs/,r=>{const u=r.request().url();r.fulfill({path:u.includes('xlsx')?'/tmp/claude-0/-home-user-hsse-safety-app/fdfedc96-6536-5042-81f9-a8e7aef3a988/scratchpad/node_modules/xlsx/dist/xlsx.full.min.js':SP+'/node_modules/'+(u.includes('jspdf')?'jspdf/dist/jspdf.umd.min.js':'html2canvas/dist/html2canvas.min.js'),contentType:'text/javascript'})});
+   await p.goto('http://localhost:8775/');await p.waitForSelector('#li_email');await p.fill('#li_email',em);await p.fill('#li_pw',pw);await p.click('#li_go');await p.waitForTimeout(1500);
+   if(await p.isVisible('#ac_old')){await p.fill('#ac_old',pw);await p.fill('#ac_new',pw+'X');await p.fill('#ac_new2',pw+'X');await p.click('#ac_go');await p.waitForTimeout(400)}
+   return {c,p}};
+ const idle=async p=>{for(let i=0;i<60;i++){const n=await p.evaluate(async()=>(await driveQueue()).length);if(!n)return;await p.waitForTimeout(500)}};
+ const S=await dev({viewport:{width:1366,height:900}},'shaifulsyazwan@octagonmaju.com.my','Start1234');
+ await S.p.click('[data-tab="mv"]');ok('Movement tab opens on this week (Mon 16 Nov 2026)',(await S.p.textContent('h1+.muted')).includes('16 Nov 2026'));
+ ok('Shaiful sees Import from Excel',await S.p.isVisible('#mvImport'));ok('"+ New" button is hidden on this tab',!(await S.p.isVisible('#btnNew')));
+ const [fc]=await Promise.all([S.p.waitForEvent('filechooser'),S.p.click('#mvImport')]);await fc.setFiles(XL);await S.p.waitForSelector('#mOk',{timeout:20000});
+ const m=await S.p.textContent('#modal');ok('Excel file: 5 weeks found',m.includes('Import 5 weeks'),m.slice(0,140));await S.p.click('#mOk');await S.p.waitForTimeout(800);
+ ok('After import it shows this week',(await S.p.textContent('h1+.muted')).includes('16 Nov'));
+ await S.p.click('[data-mvw="2026-11-16"]');
+ const cell=S.p.locator('.mv [data-mvc="1:0"]');ok('Shaiful Monday 16 Nov = EL, coloured as leave',(await cell.textContent()).trim()==='EL'&&(await cell.getAttribute('class')).includes('k-leave'));
+ ok('Multi-line entries kept',(await S.p.locator('.mv [data-mvc="1:2"]').textContent()).includes('Petron Ofc - Meeting'));
+ ok('Site tasks coloured green (from Excel fill)',(await S.p.locator('.mv [data-mvc="3:1"]').getAttribute('class')).includes('k-site'));
+ ok('Today column highlighted',(await S.p.locator('thead th.mv-today').count())===2);
+ await S.p.click('.mv [data-mvc="2:3"]');await S.p.fill('#mv_t','PS Karak – Site audit');await S.p.click('.mv-kinds [data-k="site"]');await S.p.click('#mOk');await S.p.waitForTimeout(400);
+ ok('Edit a cell',(await S.p.locator('.mv [data-mvc="2:3"]').textContent()).includes('PS Karak')&&(await S.p.locator('.mv [data-mvc="2:3"]').getAttribute('class')).includes('k-site'));
+ await S.p.click('#mvNext');await S.p.click('#mvNext');ok('Empty future week offers "Create this week\'s plan"',await S.p.isVisible('#mvCreate'));
+ await S.p.click('#mvCreate');await S.p.waitForTimeout(400);ok('New week copies people with Office / Weekend defaults',(await S.p.locator('.mv tbody tr').count())===4&&(await S.p.locator('.mv [data-mvc="0:5"]').textContent()).includes('Weekend'));
+ await S.p.click('#mvPrev');await S.p.click('#mvPrev');
+ const [dl]=await Promise.all([S.p.waitForEvent('download',{timeout:60000}),S.p.click('#mvPdf')]);ok('Download PDF',dl.suggestedFilename()==='HSSE-Movement-Planning-2026-11-16.pdf');await dl.saveAs(QA+'/mv.pdf');
+ ok('Desktop table shows all 7 days without scrolling',await S.p.evaluate(()=>{const s=document.querySelector('.mv-scroll');return s.scrollWidth<=s.clientWidth+1}));await S.p.screenshot({path:QA+'/mv-desk.png'});
+ await idle(S.p);
+ const M=await dev({...devices['iPhone 13']},'hsse7@octagonmaju.com.my','Masitah123');await M.p.evaluate(async()=>{await pullSync()});await M.p.waitForTimeout(500);
+ await M.p.click('[data-tab="mv"]');await M.p.click('[data-mvw="2026-11-16"]');
+ ok('Masitah sees the plan on her phone as one card per person',(await M.p.locator('.mv-pc').count())===4&&(await M.p.textContent('.mv-cards')).includes('PS Karak')&&!(await M.p.isVisible('.mv-card')));
+ ok('Masitah cannot edit (no import, no tap-to-edit)',!(await M.p.isVisible('#mvImport'))&&(await M.p.locator('[data-mvc]').count())===0&&(await M.p.textContent('#app')).includes('Only the HSSE manager'));
+ const w=await M.p.evaluate(()=>document.documentElement.scrollWidth-innerWidth);ok('Phone: table scrolls inside its box, page does not',w<=1);
+ await M.p.screenshot({path:QA+'/mv-phone.png',fullPage:true});
+ // forced change from Masitah is refused by the server
+ await M.p.evaluate(async()=>{const w=moves.get('2026-11-16');w.people[0].days[0]={t:'HACK',k:'site'};moves.set(w.id,w);await IDB.set('hsse-movement',[...moves.values()]);driveSend('movement','2026-11-16')});await M.p.waitForTimeout(2500);
+ ok('Server refuses changes from other accounts',(await M.p.textContent('#toast')).includes('Only the HSSE manager')&&(await M.p.evaluate(async()=>(await driveQueue()).length))===0);
+ await S.p.evaluate(async()=>{await pullSync()});ok('Refused change never reaches others',!(await S.p.textContent('.mv')).includes('HACK'));
+ ok('No script errors',errs.length===0,errs.slice(0,2).join('|'));
+ console.log(`${res.filter(Boolean).length}/${res.length} passed`);await b.close();srv.close()})().catch(e=>{console.error('CRASH',e);process.exit(1)});
