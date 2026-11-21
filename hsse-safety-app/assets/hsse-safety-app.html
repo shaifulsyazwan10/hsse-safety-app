@@ -521,7 +521,7 @@ async function useLocal(){
   if(needLogin()){showLogin();return}
   showAccountButton();
   if(view==="list")renderList();if(view==="tasks")renderTasks();if(view==="tb")renderTb();if(view==="drive")renderDrive();if(view==="dash")renderDash();
-  processDriveQueue();
+  processDriveQueue();pullSync();
 }
 let saveChain=Promise.resolve(), saveTimer=null, dirty=false;
 function setSave(t,k){const s=$("#saveState");s.textContent=t;s.style.color=k==="bad"?"var(--hivis)":""}
@@ -566,6 +566,9 @@ async function storePhoto(file){
 async function photoSrc(p){
   if(p.k==="a")return "/_blob/"+p.id;
   if(p.k==="i")return p.data;
+  if(p.k==="g"){const key="gp:"+p.id;if(photoCache.has(key))return photoCache.get(key);let d=await devGet(key);
+    if(!d&&typeof driveOn==="function"&&driveOn()){try{const j=await callServer(driveUrl,{type:"photo",token:session.token,id:p.id});d=`data:${j.type};base64,${j.data}`;await devPut(key,d)}catch(e){d=""}}
+    if(d)photoCache.set(key,d);return d||""}
   if(photoCache.has(p.id))return photoCache.get(p.id);
   try{const s=await db.collection("photos").doc(p.id).get();const d=s.exists?s.data().data:"";photoCache.set(p.id,d);return d}catch(e){return ""}
 }
@@ -1252,7 +1255,8 @@ async function loadDrive(){
   if(driveLoaded||!driveAvail())return;driveLoaded=true;
   driveUrl=(window.HSSE_DRIVE_URL||"").trim()||((await devGet("drive-url"))||"");
   session=(await devGet("session"))||null;driveLog=new Map(Object.entries((await devGet("drive-log"))||{}));
-  window.addEventListener("online",()=>processDriveQueue());setInterval(()=>processDriveQueue(),120000);
+  window.addEventListener("online",()=>{processDriveQueue();pullSync()});setInterval(()=>{processDriveQueue();pullSync()},120000);
+  document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible")pullSync()});
 }
 async function devPut(k,v){try{await IDB.set(k,v)}catch(e){lsSet(k,v)}}
 async function saveDriveLog(){await devPut("drive-log",Object.fromEntries(driveLog))}
@@ -1284,7 +1288,7 @@ function showLogin(msg){
       toast(`Signed in as ${j.name}`);
       if(j.mustChange){go("drive");setTimeout(()=>{const x=$("#ac_msg");if(x)x.textContent="Please change the starting password your admin gave you."},50)}
       else go(location.hash==="#tasks"?"tasks":location.hash==="#tb"?"tb":location.hash==="#audits"?"list":location.hash==="#pa"?"pa":"dash");
-      processDriveQueue();}
+      processDriveQueue();pullSync();}
     catch(err){m(err.message);const b=$("#li_go");if(b)b.disabled=false}};
 }
 const urlOk=u=>/^https:\/\/script\.google\.com\/(a\/[^/]+\/)?macros\/s\/[^/]+\/exec$/.test(u)||(!!window.HSSE_DRIVE_TEST&&/^https?:\/\//.test(u));
@@ -1300,13 +1304,23 @@ async function signOut(){if(dirty)await saveNow();session=null;await devPut("ses
 /* ----- Drive upload ----- */
 const sheetSafe=v=>{v=v==null?"":v;return typeof v==="string"&&/^[=+\-@]/.test(v)?"'"+v:v};
 async function blobToB64(b){return new Promise((res,rej)=>{const f=new FileReader();f.onload=()=>res(String(f.result).split(",")[1]);f.onerror=rej;f.readAsDataURL(b)})}
+let lastPhotoIdx=new Map();
 async function photoPayload(list){
-  const out=[];let n=0;
-  for(const [label,arr] of list){for(const p of arr||[]){try{const src=await toDataUrl(await photoSrc(p));if(!src)continue;n++;
+  const out=[];let n=0;lastPhotoIdx=new Map();
+  for(const [label,arr] of list){for(const p of arr||[]){try{const src=await toDataUrl(await photoSrc(p));if(!src)continue;n++;lastPhotoIdx.set(p,out.length);
     out.push({name:`${String(n).padStart(2,"0")} ${label}.jpg`.replace(/[\\/:*?"<>|]/g,"-"),type:(src.match(/^data:([^;]+)/)||[])[1]||"image/jpeg",data:src.split(",")[1]})}catch(e){}}}
   return out;
 }
+/* the full record travels with each upload so other devices can sync it; photos become placeholders for the uploaded files */
 async function buildDrivePayload(type,id){
+  lastPhotoIdx=new Map();const p=await buildDrivePayload0(type,id);
+  const live=({audit:audits,task:tasks,toolbox:tbs,production:pas})[type]?.get(id);
+  if(p&&!p.deleted&&live){const idx=lastPhotoIdx;
+    p.record=JSON.parse(JSON.stringify(live,(k,v)=>{if(v&&typeof v==="object"&&!Array.isArray(v)&&["a","d","i","g"].includes(v.k)&&("id" in v||"data" in v)){
+      if(idx.has(v))return {k:"p",i:idx.get(v),name:v.name||""};return v.k==="g"?v:undefined}return v}));}
+  return p;
+}
+async function buildDrivePayload0(type,id){
   const month=d=>(d||new Date().toISOString()).slice(0,7);
   if(type==="audit"){
     const a=audits.get(id);if(!a||a.status!=="closed")return {type,id,deleted:true};
@@ -1343,6 +1357,33 @@ async function buildDrivePayload(type,id){
       photos:await photoPayload([["Briefing",t.photos]]),
       row:[["Date",t.date],["Time",t.time],["Brief by",t.briefBy],["Location",t.location],["Topic / key hazard briefed",tbPoints(t).map((x,i)=>`${i+1}. ${x}`).join("\n")],["Photos",t.photos?.length||0]].map(([k,v])=>[k,sheetSafe(v)])};
   }
+}
+/* ----- pull changes made on other devices ----- */
+let syncBusy=false;
+async function pullSync(){
+  if(syncBusy||!driveOn()||!navigator.onLine)return;syncBusy=true;
+  try{
+    const since=(await devGet("sync-since"))||"";const first=!(await devGet("sync-pushed-v1"));
+    const mine=first?{audit:[...audits.values()].filter(a=>a.status==="closed").map(a=>a.id),task:[...tasks.keys()],toolbox:[...tbs.keys()],production:[...pas.values()].filter(r=>r.status==="closed").map(r=>r.id)}:null;
+    const j=await callServer(driveUrl,{type:"sync",token:session.token,since});
+    const maps={audit:[audits,"hsse-audits"],task:[tasks,"hsse-tasks"],toolbox:[tbs,"hsse-toolbox"],production:[pas,"hsse-production"]};
+    const touched=new Set();const q=await driveQueue();
+    for(const it of j.items||[]){const m=maps[it.type];if(!m)continue;const map=m[0];const local=map.get(it.id);const k=it.type+"_"+it.id;
+      if(q.some(x=>x.type===it.type&&x.id===it.id))continue; // a change made here is still waiting to upload: keep it
+      if(it.deleted){if(local&&(it.type==="task"||it.type==="toolbox"||local.status==="closed")){map.delete(it.id);touched.add(it.type)}driveLog.delete(k);continue}
+      const r=it.record;if(!r)continue;
+      if(!local||(local.updatedAt||"")<(r.updatedAt||"")){map.set(it.id,r);touched.add(it.type)}
+      driveLog.set(k,{at:it.updated,pdfUrl:it.pdfUrl||"",sheetUrl:it.sheetUrl||"",deleted:false});}
+    for(const t of touched)await IDB.set(maps[t][1],[...maps[t][0].values()]);
+    await saveDriveLog();await devPut("sync-since",j.now);
+    if(first){await devPut("sync-pushed-v1",true);const now=Date.now();const qq=await driveQueue();
+      for(const [type,ids] of Object.entries(mine))for(const id of ids)if(!qq.some(x=>x.type===type&&x.id===id))qq.push({type,id,at:now});
+      await driveQueueSet(qq);processDriveQueue()}
+    if(touched.size){if(view==="list")keepFocus(renderList);else if(view==="tasks")keepFocus(renderTasks);else if(view==="tb")keepFocus(renderTb);else if(view==="pa")keepFocus(renderPa);else if(view==="dash")keepFocus(renderDash);
+      if(since)toast("New updates from your team")}
+    refreshDriveChips();
+  }catch(e){if(e&&e.code==="signed out"){session=null;await devPut("session",null);showLogin("Your sign-in has ended. Please sign in again – your records are safe on this device.")}}
+  finally{syncBusy=false}
 }
 async function driveQueue(){try{return (await IDB.get("drive-queue"))||[]}catch(e){return lsGet("drive-queue")||[]}}
 async function driveQueueSet(q){await devPut("drive-queue",q)}

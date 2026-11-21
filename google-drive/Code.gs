@@ -14,7 +14,9 @@
  *        Task Updates/  (tasks are rows in the sheet only)
  *    Saving a record again replaces its PDF/photos and updates its sheet row (no duplicates).
  *
- * 3. NEWS: every day at 6 AM (Malaysia time) the latest DOSH, DOE, workplace-accident and safety & health
+ * 3. SYNC: the full record (without photo bytes) is kept in the "Data" tab so every phone and computer that
+ *    signs in gets the same tasks, toolbox meetings and submitted audits. Photos are read back from Drive.
+ * 4. NEWS: every day at 6 AM (Malaysia time) the latest DOSH, DOE, workplace-accident and safety & health
  *    news in Malaysia is collected from Google News into the "News" tab and shown on the app's dashboard.
  *
  * Setup: see GOOGLE-DRIVE-SETUP.md. Run setup() once, then Deploy > New deployment > Web app
@@ -64,6 +66,8 @@ function doPost(e) {
     const who = checkToken_(ss, p.token);
     if (!who) return out_({ ok: false, error: 'signed out' });
     if (p.type === 'password') return out_(changePassword_(ss, who, p.old, p.password));
+    if (p.type === 'sync') return out_(sync_(ss, p.since));
+    if (p.type === 'photo') return out_(photo_(p.id));
     if (p.type === 'news') { lock.waitLock(60000); locked = true; return out_(news_(!!p.force)); }
     const root = root_();
     if (p.type === 'ping') return out_({ ok: true, name: who.name, folderUrl: root.getUrl(), sheetUrl: ss.getUrl() });
@@ -82,10 +86,12 @@ function doPost(e) {
         if (p.type !== 'task') { del.push(['PDF', '']); del.push(['Folder', '']); }
         writeRow_(tab, rowIdx, p.id, del);
       }
+      saveData_(ss, p.type, p.id, true, null, '', sheetUrl);
       return out_({ ok: true, sheetUrl: sheetUrl });
     }
 
     let pdfUrl = '', folderUrl = '';
+    const fileIds = [];
     if (p.pdf || (p.photos && p.photos.length)) {
       const month = child_(child_(root, TYPES[p.type]), String(p.month || 'Unsorted'));
       let folder = null;
@@ -99,7 +105,7 @@ function doPost(e) {
       }
       if (p.pdf) pdfUrl = folder.createFile(Utilities.newBlob(Utilities.base64Decode(p.pdf.data), 'application/pdf', clean_(p.pdf.name))).getUrl();
       (p.photos || []).forEach(function (ph) {
-        folder.createFile(Utilities.newBlob(Utilities.base64Decode(ph.data), ph.type || 'image/jpeg', clean_(ph.name)));
+        fileIds.push(folder.createFile(Utilities.newBlob(Utilities.base64Decode(ph.data), ph.type || 'image/jpeg', clean_(ph.name))).getId());
       });
       folderUrl = folder.getUrl();
     }
@@ -108,6 +114,7 @@ function doPost(e) {
     row.push(['Saved by', who.name]);
     row.push(['Saved to Drive', new Date()]);
     writeRow_(tab, rowIdx, p.id, row);
+    if (p.record) saveData_(ss, p.type, p.id, false, linkPhotos_(p.record, fileIds), pdfUrl, sheetUrl);
     return out_({ ok: true, pdfUrl: pdfUrl, folderUrl: folderUrl, sheetUrl: sheetUrl });
   } catch (err) {
     return out_({ ok: false, error: String(err && err.message || err) });
@@ -333,3 +340,64 @@ function decode_(s) {
   return String(s).replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, '$1').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&amp;/g, '&').trim();
 }
 function normTitle_(t) { return String(t || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim().slice(0, 80); }
+
+/* ---------- sync between devices ---------- */
+const DATA_TAB = 'Data';
+const DATA_COLS = ['Key', 'Type', 'ID', 'Updated', 'Deleted', 'PDF', 'Sheet', 'Chunks'];
+const CHUNK = 45000; // characters per cell (a Sheets cell holds up to 50,000)
+function data_(ss) {
+  let sh = ss.getSheetByName(DATA_TAB);
+  if (!sh) { sh = ss.insertSheet(DATA_TAB); sh.getRange(1, 1, 1, DATA_COLS.length).setValues([DATA_COLS]); sh.setFrozenRows(1); }
+  return sh;
+}
+/** photos in the record are {k:'p', i:n} placeholders for the n-th uploaded photo; point them at the Drive files */
+function linkPhotos_(rec, ids) {
+  const walk = function (v) {
+    if (Array.isArray(v)) return v.map(walk);
+    if (v && typeof v === 'object') {
+      if (v.k === 'p' && typeof v.i === 'number') return ids[v.i] ? { k: 'g', id: ids[v.i], name: v.name || '' } : null;
+      const o = {}; Object.keys(v).forEach(function (k) { const x = walk(v[k]); if (x !== null) o[k] = x; }); return o;
+    }
+    return v;
+  };
+  const out = walk(rec);
+  const clean = function (v) { if (Array.isArray(v)) return v.filter(function (x) { return x !== null; }).map(clean); if (v && typeof v === 'object') { Object.keys(v).forEach(function (k) { v[k] = clean(v[k]); }); } return v; };
+  return clean(out);
+}
+function saveData_(ss, type, id, deleted, rec, pdfUrl, sheetUrl) {
+  const sh = data_(ss);
+  const key = type + '_' + id;
+  const json = rec ? JSON.stringify(rec) : '';
+  const chunks = []; for (let i = 0; i < json.length; i += CHUNK) chunks.push(json.slice(i, i + CHUNK));
+  const row = [key, type, id, new Date().toISOString(), deleted ? 'yes' : '', pdfUrl || '', sheetUrl || '', chunks.length].concat(chunks);
+  const lr = sh.getLastRow();
+  let r = 0;
+  if (lr > 1) { const keys = sh.getRange(2, 1, lr - 1, 1).getValues(); for (let i = 0; i < keys.length; i++) if (keys[i][0] === key) { r = i + 2; break; } }
+  if (!r) r = lr + 1;
+  const width = Math.max(sh.getLastColumn(), row.length);
+  const full = row.concat(new Array(width - row.length).fill(''));
+  sh.getRange(r, 1, 1, width).setValues([full]);
+}
+function sync_(ss, since) {
+  const sh = data_(ss);
+  const lr = sh.getLastRow(), lc = sh.getLastColumn();
+  const now = new Date().toISOString();
+  if (lr < 2) return { ok: true, now: now, items: [] };
+  const rows = sh.getRange(2, 1, lr - 1, lc).getValues();
+  const items = [];
+  rows.forEach(function (r) {
+    const upd = String(r[3]);
+    if (since && upd <= since) return;
+    const n = Number(r[7]) || 0;
+    let rec = null;
+    if (!r[4] && n) { try { rec = JSON.parse(r.slice(8, 8 + n).join('')); } catch (e) { rec = null; } }
+    items.push({ type: String(r[1]), id: String(r[2]), updated: upd, deleted: !!r[4], pdfUrl: String(r[5] || ''), sheetUrl: String(r[6] || ''), record: rec });
+  });
+  return { ok: true, now: now, items: items };
+}
+function photo_(id) {
+  try {
+    const b = DriveApp.getFileById(String(id)).getBlob();
+    return { ok: true, type: b.getContentType() || 'image/jpeg', data: Utilities.base64Encode(b.getBytes()) };
+  } catch (e) { return { ok: false, error: 'photo not found' }; }
+}

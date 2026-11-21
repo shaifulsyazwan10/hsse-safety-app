@@ -8,8 +8,8 @@ function wrapF(f){return {getId:()=>f.id,getName:()=>f.name,setName:n=>{f.name=n
   getFoldersByName:n=>{const l=f.kids.filter(k=>k.name===n&&!k.trashed);let i=0;return {hasNext:()=>i<l.length,next:()=>wrapF(l[i++])}},
   createFolder:n=>Folder(n,f),
   getFiles:()=>{const l=f.files.filter(x=>!x.trashed);let i=0;return {hasNext:()=>i<l.length,next:()=>wrapFile(l[i++])}},
-  createFile:b=>{const x={id:newId(),name:b.name,type:b.type,size:b.bytes.length,trashed:false,folder:f};files.set(x.id,x);f.files.push(x);return wrapFile(x)},_raw:f}}
-function wrapFile(x){return {getId:()=>x.id,getUrl:()=>'https://drive.google.com/file/d/'+x.id+'/view',isTrashed:()=>x.trashed,setTrashed:t=>{x.trashed=t},moveTo:fo=>{x.folder=fo._raw;fo._raw.files.push(x)}}}
+  createFile:b=>{const x={id:newId(),name:b.name,type:b.type,size:b.bytes.length,bytes:b.bytes,trashed:false,folder:f};files.set(x.id,x);f.files.push(x);return wrapFile(x)},_raw:f}}
+function wrapFile(x){return {getBlob:()=>({getBytes:()=>Buffer.from(x.bytes||[]),getContentType:()=>x.type}),getId:()=>x.id,getUrl:()=>'https://drive.google.com/file/d/'+x.id+'/view',isTrashed:()=>x.trashed,setTrashed:t=>{x.trashed=t},moveTo:fo=>{x.folder=fo._raw;fo._raw.files.push(x)}}}
 const rootF=Folder('My Drive',null);
 const sheets=new Map();
 function Sheet(name){const rows=[];let gid=Math.floor(Math.random()*1e6);
@@ -31,7 +31,7 @@ const ctx={
     DigestAlgorithm:{SHA_256:'sha256'},Charset:{UTF_8:'utf8'},
     computeDigest:(alg,v)=>[...require('crypto').createHash('sha256').update(typeof v==='string'?Buffer.from(v,'utf8'):Buffer.from(v.map(b=>b&255))).digest()].map(b=>b>127?b-256:b),
     computeHmacSha256Signature:(v,k)=>[...require('crypto').createHmac('sha256',k).update(v).digest()].map(b=>b>127?b-256:b),
-    base64Encode:a=>Buffer.from(a.map(b=>b&255)).toString('base64'),
+    base64Encode:a=>(Buffer.isBuffer(a)?a:Buffer.from(a.map(b=>b&255))).toString('base64'),
     base64EncodeWebSafe:a=>(typeof a==='string'?Buffer.from(a,'utf8'):Buffer.from(a.map(b=>b&255))).toString('base64').replace(/\+/g,'-').replace(/\//g,'_'),
     base64DecodeWebSafe:s=>[...Buffer.from(s.replace(/-/g,'+').replace(/_/g,'/'),'base64')]},
   CacheService:{getScriptCache:()=>({get:k=>cache.get(k)??null,put:(k,v)=>cache.set(k,v),remove:k=>cache.delete(k)})},

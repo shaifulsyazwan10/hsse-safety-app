@@ -1,16 +1,17 @@
 # Sign-in + Google Drive setup (one time, about 10 minutes)
 
-The app at https://shaifulsyazwan10.github.io/hsse-safety-app/ uses one small Google Apps Script, owned by the HSSE department's Google account, for three jobs:
+The app at https://shaifulsyazwan10.github.io/hsse-safety-app/ uses one small Google Apps Script, owned by the HSSE department's Google account, for four jobs:
 
 1. **Sign-in** – each team member signs in with an email and password that you manage in the **Users** tab of a Google Sheet.
 2. **Google Drive copy** – every submitted site audit, saved task and saved toolbox meeting is saved in that account's Drive:
 
-3. **Daily news** – every day at 6 AM (Malaysia time) the script collects the latest DOSH / JKKP, DOE / JAS, workplace-accident and safety & health news in Malaysia from Google News (English and Malay) into the **News** tab. The dashboard shows it under **Safety & Health News**.
+3. **Sync between phones and computers** – every saved task, toolbox meeting, submitted site audit and submitted production audit is also stored in the hidden **Data** tab, so every device that signs in sees the same records (photos are read back from Drive). Drafts stay on the device where they were started.
+4. **Daily news** – every day at 6 AM (Malaysia time) the script collects the latest DOSH / JKKP, DOE / JAS, workplace-accident and safety & health news in Malaysia from Google News (English and Malay) into the **News** tab. The dashboard shows it under **Safety & Health News**.
 
 ```
 My Drive/
 └── HSSE Safety/
-    ├── HSSE Safety Records        ← Google Sheet: "Site Audits", "Task Updates", "Toolbox Meetings", "Production Audits", "Users"
+    ├── HSSE Safety Records        ← Google Sheet: "Site Audits", "Task Updates", "Toolbox Meetings", "Production Audits", "Users", "Data", "News"
     ├── Site Audits/2026-11/2026-11-20 PS Karak/          ← PDF report + all photos
     ├── Toolbox Meetings/2026-11/2026-11-20 0800 Bay 2/   ← PDF + briefing photos
     ├── Production Audits/2026-11/2026-11-20 Line 2/      ← PDF + item photos
