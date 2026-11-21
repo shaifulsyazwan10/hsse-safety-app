@@ -29,7 +29,7 @@ const body=`
  const b64=await p.evaluate(async()=>{const u=new Uint8Array(await window.__saved.at(-1).blob.arrayBuffer());let s='';for(let i=0;i<u.length;i+=8192)s+=String.fromCharCode(...u.subarray(i,i+8192));return btoa(s)});fs.writeFileSync(QA+'/production.pdf',Buffer.from(b64,'base64'));
  await p.click('#paBack');await p.waitForTimeout(300);ok('League chart lists the area',(await p.textContent('#c_league')).includes('Fabrication line 2'));
  await p.click('#btnPaCsv');await p.waitForTimeout(200);const csv=await p.evaluate(()=>window.__saved.at(-1));ok('CSV export',csv.filename.startsWith('production-audits')&&csv.text.includes('Fabrication line 2'));
- await p.click('[data-tab="dash"]');await p.waitForTimeout(300);ok('Dashboard shows 6 charts incl. production league',(await p.locator('.dash-grid .viz').count())===6&&(await p.locator('#c_league_d svg').count())===1&&(await p.textContent('#c_league_d')).includes('Fabrication'));
+ await p.click('[data-tab="dash"]');await p.waitForTimeout(300);ok('Dashboard shows 6 charts incl. production league',(await p.locator('.dash-grid .viz:not(#newsCard)').count())===6&&(await p.locator('#newsCard').count())===1&&(await p.locator('#c_league_d svg').count())===1&&(await p.textContent('#c_league_d')).includes('Fabrication'));
  await noOverflow('Dashboard');await p.screenshot({path:QA+'/pa-dash.png',fullPage:true});
  await p.click('[data-tab="pa"]');await p.click('.row');await p.click('#paEdit');await p.click('#mOk');await p.waitForTimeout(300);ok('Reopen returns to editable draft',await p.isVisible('#pa_submit'));
  await p.screenshot({path:QA+'/pa-form.png'});

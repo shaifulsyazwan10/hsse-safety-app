@@ -14,6 +14,9 @@
  *        Task Updates/  (tasks are rows in the sheet only)
  *    Saving a record again replaces its PDF/photos and updates its sheet row (no duplicates).
  *
+ * 3. NEWS: every day at 6 AM (Malaysia time) the latest DOSH, DOE, workplace-accident and safety & health
+ *    news in Malaysia is collected from Google News into the "News" tab and shown on the app's dashboard.
+ *
  * Setup: see GOOGLE-DRIVE-SETUP.md. Run setup() once, then Deploy > New deployment > Web app
  * (Execute as: Me, Who has access: Anyone) and give the web app URL to the app.
  */
@@ -36,6 +39,7 @@ function setup() {
   const ss = sheet_();
   Object.keys(TYPES).forEach(function (t) { child_(root, TYPES[t]); tab_(ss, TYPES[t]); });
   users_(ss);
+  setupNews();
   Logger.log('Drive folder: ' + root.getUrl());
   Logger.log('Records sheet (add passwords in the "Users" tab): ' + ss.getUrl());
 }
@@ -60,6 +64,7 @@ function doPost(e) {
     const who = checkToken_(ss, p.token);
     if (!who) return out_({ ok: false, error: 'signed out' });
     if (p.type === 'password') return out_(changePassword_(ss, who, p.old, p.password));
+    if (p.type === 'news') { lock.waitLock(60000); locked = true; return out_(news_(!!p.force)); }
     const root = root_();
     if (p.type === 'ping') return out_({ ok: true, name: who.name, folderUrl: root.getUrl(), sheetUrl: ss.getUrl() });
     if (!TYPES[p.type] || !p.id) return out_({ ok: false, error: 'bad request' });
@@ -249,3 +254,82 @@ function changePassword_(ss, who, oldPw, pw) {
   sh.getRange(who.row, col_('Password hash')).setValue(salt + '$' + hash_(salt, pw));
   return { ok: true };
 }
+
+/* ---------- Safety & health news (Malaysia), refreshed daily ---------- */
+// Google News RSS searches, in English and Malay. Each result is tagged with the first group that found it.
+const NEWS_FEEDS = [
+  { cat: 'DOSH', q: '(DOSH Malaysia OR JKKP OR "Jabatan Keselamatan dan Kesihatan Pekerjaan") when:7d' },
+  { cat: 'DOE', q: '("Department of Environment" Malaysia OR "Jabatan Alam Sekitar" OR "JAS Malaysia") when:7d' },
+  { cat: 'Accident', q: '("workplace accident" Malaysia OR "industrial accident" Malaysia OR "kemalangan tempat kerja" OR "kemalangan industri" OR "pekerja maut") when:7d' },
+  { cat: 'Safety & health', q: '("occupational safety and health" Malaysia OR "NIOSH Malaysia" OR "OSHA 1994" OR "keselamatan dan kesihatan pekerjaan" OR "Akta Keselamatan dan Kesihatan Pekerjaan") when:7d' }
+];
+const NEWS_TAB = 'News';
+const NEWS_KEEP_DAYS = 45;
+
+/** Fetches the latest news into the "News" tab. Runs every day at 6 AM (see setupNews). */
+function updateNews() {
+  const ss = sheet_();
+  let sh = ss.getSheetByName(NEWS_TAB);
+  if (!sh) { sh = ss.insertSheet(NEWS_TAB); sh.getRange(1, 1, 1, 6).setValues([['Link', 'Title', 'Source', 'Published', 'Group', 'Added']]); sh.setFrozenRows(1); }
+  const lr = sh.getLastRow();
+  const old = lr > 1 ? sh.getRange(2, 1, lr - 1, 6).getValues() : [];
+  const seen = {}; old.forEach(function (r) { seen[String(r[0])] = 1; seen[normTitle_(r[1])] = 1; });
+  const added = [];
+  NEWS_FEEDS.forEach(function (f) {
+    const lang = [['en-MY', 'MY:en'], ['ms', 'MY:ms']];
+    lang.forEach(function (l) {
+      const url = 'https://news.google.com/rss/search?q=' + encodeURIComponent(f.q) + '&hl=' + l[0] + '&gl=MY&ceid=' + l[1];
+      let xml = '';
+      try { const r = UrlFetchApp.fetch(url, { muteHttpExceptions: true }); if (r.getResponseCode() === 200) xml = r.getContentText(); } catch (e) { return; }
+      parseRss_(xml).forEach(function (it) {
+        const k = normTitle_(it.title);
+        if (!it.link || seen[it.link] || seen[k]) return;
+        seen[it.link] = 1; seen[k] = 1;
+        added.push([it.link, it.title, it.source, it.date, f.cat, new Date()]);
+      });
+    });
+  });
+  const cutoff = Date.now() - NEWS_KEEP_DAYS * 864e5;
+  const all = old.concat(added).filter(function (r) { const d = new Date(r[3]).getTime(); return !isNaN(d) && d >= cutoff; });
+  all.sort(function (a, b) { return new Date(b[3]) - new Date(a[3]); });
+  if (lr > 1) sh.getRange(2, 1, lr - 1, 6).clearContent();
+  if (all.length) sh.getRange(2, 1, all.length, 6).setValues(all.slice(0, 400));
+  PropertiesService.getScriptProperties().setProperty('NEWS_UPDATED', new Date().toISOString());
+  Logger.log('News updated: ' + added.length + ' new, ' + Math.min(all.length, 400) + ' kept.');
+}
+
+/** Creates the daily 6 AM (Malaysia time) news update. setup() runs it for you. */
+function setupNews() {
+  ScriptApp.getProjectTriggers().forEach(function (t) { if (t.getHandlerFunction() === 'updateNews') ScriptApp.deleteTrigger(t); });
+  ScriptApp.newTrigger('updateNews').timeBased().everyDays(1).atHour(6).inTimezone('Asia/Kuala_Lumpur').create();
+  updateNews();
+}
+
+function news_(force) {
+  const props = PropertiesService.getScriptProperties();
+  const upd = props.getProperty('NEWS_UPDATED');
+  const age = upd ? Date.now() - new Date(upd).getTime() : Infinity;
+  if (age > 26 * 36e5 || (force && age > 36e5)) { try { updateNews(); } catch (e) {} }
+  const sh = sheet_().getSheetByName(NEWS_TAB);
+  const lr = sh ? sh.getLastRow() : 0;
+  const rows = lr > 1 ? sh.getRange(2, 1, Math.min(lr - 1, 120), 5).getValues() : [];
+  return { ok: true, updated: props.getProperty('NEWS_UPDATED') || '',
+    items: rows.map(function (r) { return { link: String(r[0]), title: String(r[1]), source: String(r[2]), date: new Date(r[3]).toISOString(), cat: String(r[4]) }; }) };
+}
+
+function parseRss_(xml) {
+  const out = [];
+  const items = String(xml || '').match(/<item>[\s\S]*?<\/item>/g) || [];
+  items.forEach(function (x) {
+    const get = function (tag) { const m = x.match(new RegExp('<' + tag + '[^>]*>([\\s\\S]*?)</' + tag + '>')); return m ? decode_(m[1]) : ''; };
+    let title = get('title'); const source = get('source');
+    if (source && title.slice(-(source.length + 3)) === ' - ' + source) title = title.slice(0, -(source.length + 3));
+    const d = new Date(get('pubDate'));
+    out.push({ title: title, link: get('link'), source: source, date: isNaN(d) ? '' : d.toISOString() });
+  });
+  return out;
+}
+function decode_(s) {
+  return String(s).replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, '$1').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&amp;/g, '&').trim();
+}
+function normTitle_(t) { return String(t || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim().slice(0, 80); }

@@ -36,6 +36,14 @@ const ctx={
     base64DecodeWebSafe:s=>[...Buffer.from(s.replace(/-/g,'+').replace(/_/g,'/'),'base64')]},
   CacheService:{getScriptCache:()=>({get:k=>cache.get(k)??null,put:(k,v)=>cache.set(k,v),remove:k=>cache.delete(k)})},
   ContentService:{createTextOutput:t=>({text:t,setMimeType(){return this}}),MimeType:{JSON:'json'}},
+  UrlFetchApp:{fetch:(url)=>{const q=decodeURIComponent(url.split('q=')[1].split('&')[0]);const ms=url.includes('hl=ms');global.__fetches=(global.__fetches||0)+1;
+    const now=Date.now();const mk=(t,src,h)=>`<item><title>${t} - ${src}</title><link>https://news.google.com/rss/articles/${encodeURIComponent(t).slice(0,40)}</link><pubDate>${new Date(now-h*36e5).toUTCString()}</pubDate><description>&lt;a href="x"&gt;x&lt;/a&gt;</description><source url="https://example.com">${src}</source></item>`;
+    let items='';if(q.includes('DOSH'))items=mk('TEST DOSH inspection drive &amp; new guideline','Test Daily',5)+mk('TEST JKKP campaign','Test Berita',30);
+    else if(q.includes('Department of Environment'))items=mk('TEST DOE river pollution notice','Test Times',10);
+    else if(q.includes('workplace accident'))items=mk(ms?'TEST Pekerja maut di kilang':'TEST Worker killed at factory','Test Star',2)+mk('TEST Worker killed at factory','Test Star',2)+mk('TEST old accident','Test Star',24*60);
+    else items=mk('TEST NIOSH safety week <![CDATA[special]]>','Test Post',40);
+    return {getResponseCode:()=>200,getContentText:()=>`<?xml version="1.0"?><rss><channel><title>x</title>${items}</channel></rss>`}}},
+  ScriptApp:{getProjectTriggers:()=>[],deleteTrigger:()=>{},newTrigger:()=>{const o={timeBased:()=>o,everyDays:()=>o,atHour:()=>o,inTimezone:()=>o,create:()=>{global.__trigger=true;return o}};return o}},
   LockService:{getScriptLock:()=>({waitLock:()=>{},releaseLock:()=>{}})},
   Logger:{log:m=>console.log('[gas] '+m)},console
 };
@@ -47,6 +55,7 @@ http.createServer((q,r)=>{const h={'access-control-allow-origin':'*','content-ty
   if(q.url.startsWith('/admin?')){const u=new URL('http://x'+q.url);const ss=[...sheets.values()][0];const t=ss.tabs.find(x=>x.name==='Users');
     const i=t.rows.findIndex(r=>String(r[0]).toLowerCase()===u.searchParams.get('email'));const col=t.rows[0].indexOf(u.searchParams.get('col')||'New password');
     if(i<0){t.rows.push([u.searchParams.get('email'),u.searchParams.get('name')||'X','Yes']);}const row=t.rows[i<0?t.rows.length-1:i];row[col]=u.searchParams.get('v');cache.clear();r.writeHead(200,h);return r.end('{"ok":true}')}
+  if(q.url==='/fetches'){r.writeHead(200,h);return r.end(JSON.stringify({fetches:global.__fetches||0,trigger:!!global.__trigger}))}
   if(q.url==='/state'){r.writeHead(200,h);const tree=f=>({name:f.name,trashed:f.trashed,files:f.files.filter(x=>!x.trashed).map(x=>x.name+' ('+x.size+')'),kids:f.kids.filter(k=>!k.trashed).map(tree)});
     const ss=[...sheets.values()][0];return r.end(JSON.stringify({tree:tree(rootF._raw),tabs:ss.tabs.map(t=>({name:t.name,rows:t.rows}))}))}
   let b='';q.on('data',d=>b+=d);q.on('end',()=>{try{const o=ctx.doPost({postData:{contents:b}});r.writeHead(200,h);r.end(o.text)}catch(e){r.writeHead(500,h);r.end(JSON.stringify({ok:false,error:String(e)}))}})

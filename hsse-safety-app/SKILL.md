@@ -66,6 +66,10 @@ The user chose **no Firebase**. On the GitHub address each device keeps its own 
 - claude.ai's CSP blocks script.google.com, so none of this runs in the artifact (the artifact uses its own shared db, no sign-in).
 - Tests: `scripts/gas-mock.js` runs Code.gs on in-memory Drive/Sheets (`/admin?email=&v=&col=` sets a Users cell); `scripts/drive-test.js` (22 checks) and `scripts/standalone-test.js` drive the app against it with `window.HSSE_DRIVE_TEST=true`.
 
+## Safety & health news (dashboard)
+
+The dashboard ends with **Safety & health news · Malaysia** (`renderNewsCard`, `loadNews`). On the GitHub address the app calls the Apps Script with `{type:"news", token, force}`; the script's `updateNews()` runs daily at 6 AM Asia/Kuala_Lumpur (trigger made by `setupNews()`, called from `setup()`), fetches Google News RSS searches (`NEWS_FEEDS`: DOSH/JKKP, DOE/JAS, workplace accidents incl. Malay terms, general OSH; `when:7d`, `hl=en-MY` and `ms`), parses them with regex (`parseRss_`), de-duplicates by link and normalised title, keeps 45 days (max 400) in the **News** sheet tab, and `news_()` returns up to 120 items (refreshing first if older than 26 h). The app caches the last list in IndexedDB (`news-cache`) for offline use; filter chips by group; headlines open the source in a new tab. On claude.ai (CSP blocks outside fetches) the card points to the GitHub version; it would also read a `news/latest` db document if one is ever written. Tests: `scripts/gas-mock.js` stubs UrlFetchApp with sample RSS; `scripts/news-test.js`.
+
 ## Daily task email
 
 The user wants one email to the safety team Mon–Fri ~5:30 PM MYT summarising tasks. Recipients and the full email spec are in `references/daily-task-email.md`. A scheduled task created from a chat session could not attach the Gmail connector (org setting), so it must be created from the claude.ai scheduled-tasks UI with Gmail selected, using that file as the prompt. A disabled duplicate named "HSSE daily task update email" may exist — suggest deleting it.
