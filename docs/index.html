@@ -1676,6 +1676,7 @@ function renderDash(){
   const kpi=(k,label,val,sub,go,cls="")=>`<button class="kpi ${cls}" data-go="${go}" aria-label="${esc(label)}: ${esc(String(val))}"><span class="kpi-l">${label}</span><span class="kpi-ring"><b>${val}</b></span><span class="kpi-s">${sub}</span></button>`;
   $("#app").innerHTML=`
    <div class="dash-head"><div><h1>HSSE Dashboard</h1><div class="muted">Site audits, task updates, toolbox meetings and production audits · ${esc(rangeTxt)}${who?` · ${esc(who)}`:""}</div></div></div>
+   <section class="card viz" id="newsCard"></section>
    <div class="toolbar dash-filters">
      <select id="df_range" aria-label="Date range">${[["30","Last 30 days"],["90","Last 3 months"],["365","Last 12 months"],["year","This year"],["all","All time"],["custom","Custom dates…"]].map(([v,l])=>`<option value="${v}" ${dashF.range===v?"selected":""}>${l}</option>`).join("")}</select>
      <span id="df_custom" ${dashF.range==="custom"?"":"hidden"} class="df-custom"><input type="date" id="df_from" value="${esc(dashF.from)}" aria-label="From"><span>to</span><input type="date" id="df_to" value="${esc(dashF.to)}" aria-label="To"></span>
@@ -1693,7 +1694,6 @@ function renderDash(){
      ${kpi("soon","Due in 7 days",soon.length,soon.filter(t=>t.priority==="H").length?`${soon.filter(t=>t.priority==="H").length} high priority`:"open tasks","tasks:open",soon.length?"warn":"")}
    </div>
    <div class="dash-grid">
-     <section class="card viz wide" id="newsCard"></section>
      <section class="card viz wide"><div class="viz-h"><div><h3>Activity by month</h3><p>Submitted site audits, toolbox meetings, tasks due and production audits each month</p></div><button class="small-btn" data-tbl>Table</button></div><div id="c_month" data-title="Activity by month"></div></section>
      <section class="card viz"><div class="viz-h"><div><h3>Not comply findings by section</h3><p>Tap a bar to see the audits</p></div><button class="small-btn" data-tbl>Table</button></div><div id="c_nc" data-title="Not comply findings by section"></div></section>
      <section class="card viz"><div class="viz-h"><div><h3>Average audit score by client</h3><p>Comply ÷ (comply + not comply)</p></div><button class="small-btn" data-tbl>Table</button></div><div id="c_client" data-title="Average audit score by client"></div></section>
