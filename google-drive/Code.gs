@@ -249,3 +249,129 @@ function changePassword_(ss, who, oldPw, pw) {
   sh.getRange(who.row, col_('Password hash')).setValue(salt + '$' + hash_(salt, pw));
   return { ok: true };
 }
+
+/* ---------- Daily task reminder (AI agent) ----------
+ * Every working day (Mon–Fri) at about 8:30 AM Malaysia time, this emails ONE summary of all
+ * pending work to REMINDER_TO: overdue + due soon on top, all open tasks, and a count per person.
+ * Turn it on: run startDailyReminder() once. Turn it off: run stopDailyReminder().
+ * Test it now: run sendDailyTaskReminder() (it sends even on weekends when run by hand).
+ */
+const REMINDER_TO = 'shaifulsyazwan@octagonmaju.com.my';
+const REMINDER_TZ = 'Asia/Kuala_Lumpur';
+
+function startDailyReminder() {
+  stopDailyReminder();
+  ScriptApp.newTrigger('dailyReminderTrigger_').timeBased().everyDays(1).atHour(8).nearMinute(30).inTimezone(REMINDER_TZ).create();
+  Logger.log('Daily reminder is ON: Mon–Fri about 8:30 AM to ' + REMINDER_TO);
+}
+function stopDailyReminder() {
+  ScriptApp.getProjectTriggers().forEach(function (t) {
+    if (t.getHandlerFunction() === 'dailyReminderTrigger_') ScriptApp.deleteTrigger(t);
+  });
+  Logger.log('Daily reminder is OFF.');
+}
+function dailyReminderTrigger_() {
+  const day = Utilities.formatDate(new Date(), REMINDER_TZ, 'u'); // 1 = Mon ... 7 = Sun
+  if (day === '6' || day === '7') return;
+  sendDailyTaskReminder();
+}
+
+function sendDailyTaskReminder() {
+  const ss = sheet_();
+  const sh = ss.getSheetByName(TYPES.task);
+  const sheetTz = ss.getSpreadsheetTimeZone();
+  const now = new Date();
+  const tasks = [];
+  if (sh && sh.getLastRow() > 1) {
+    const v = sh.getDataRange().getValues();
+    const h = v[0].map(String);
+    const get = function (row, name) { const i = h.indexOf(name); return i < 0 ? '' : row[i]; };
+    for (let r = 1; r < v.length; r++) {
+      const status = String(get(v[r], 'Status') || 'Pending').trim();
+      if (!get(v[r], 'Task') || /^(complete|deleted)$/i.test(status)) continue;
+      const due = dueDate_(get(v[r], 'Date to complete'), get(v[r], 'Time'), sheetTz);
+      tasks.push({
+        title: String(get(v[r], 'Task')), who: String(get(v[r], 'Assigned to') || 'Not assigned'),
+        prio: String(get(v[r], 'Priority') || 'Medium'), status: status,
+        pct: Number(get(v[r], 'Progress %')) || 0, due: due,
+        note: String(get(v[r], 'Latest update') || get(v[r], 'Last update') || '')
+      });
+    }
+  }
+  const HOUR = 3600000;
+  tasks.forEach(function (t) { t.left = t.due ? t.due.getTime() - now.getTime() : null; });
+  const rank = { High: 0, Medium: 1, Low: 2 };
+  tasks.sort(function (a, b) {
+    const ad = a.left == null ? Infinity : a.left, bd = b.left == null ? Infinity : b.left;
+    return ad - bd || (rank[a.prio] ?? 1) - (rank[b.prio] ?? 1);
+  });
+  const overdue = tasks.filter(function (t) { return t.left != null && t.left < 0; });
+  const soon = tasks.filter(function (t) { return t.left != null && t.left >= 0 && t.left <= 48 * HOUR; });
+
+  const people = {};
+  tasks.forEach(function (t) {
+    const p = people[t.who] || (people[t.who] = { open: 0, late: 0 });
+    p.open++; if (t.left != null && t.left < 0) p.late++;
+  });
+
+  const dateTxt = Utilities.formatDate(now, REMINDER_TZ, 'EEE dd MMM yyyy');
+  const subject = (overdue.length ? '[' + overdue.length + ' overdue] ' : '') + 'HSSE Pending Work – ' + dateTxt;
+  const th = 'style="background:#00008B;color:#fff;padding:6px;text-align:left;font-size:13px"';
+  const td = 'style="border-bottom:1px solid #ddd;padding:6px;font-size:13px;vertical-align:top"';
+  const prioColor = { High: '#d32f2f', Medium: '#f9a825', Low: '#2e7d32' };
+  const table = function (list, title, color) {
+    if (!list.length) return '';
+    let s = '<h3 style="color:' + color + ';margin:18px 0 6px">' + title + ' (' + list.length + ')</h3>'
+      + '<table style="border-collapse:collapse;width:100%"><tr><th ' + th + '>Task</th><th ' + th + '>Priority</th><th ' + th
+      + '>Assigned to</th><th ' + th + '>Status</th><th ' + th + '>%</th><th ' + th + '>Due</th><th ' + th + '>Remaining</th><th '
+      + th + '>Latest update</th></tr>';
+    list.forEach(function (t) {
+      s += '<tr><td ' + td + '><b>' + esc_(t.title) + '</b></td>'
+        + '<td ' + td + '><span style="color:' + (prioColor[t.prio] || '#555') + ';font-weight:bold">' + esc_(t.prio) + '</span></td>'
+        + '<td ' + td + '>' + esc_(t.who) + '</td><td ' + td + '>' + esc_(t.status) + '</td><td ' + td + '>' + t.pct + '%</td>'
+        + '<td ' + td + '>' + (t.due ? Utilities.formatDate(t.due, REMINDER_TZ, 'dd MMM yyyy HH:mm') : '-') + '</td>'
+        + '<td ' + td + (t.left != null && t.left < 0 ? ' bgcolor="#ffebee"' : '') + '>' + remainTxt_(t.left) + '</td>'
+        + '<td ' + td + '>' + esc_(t.note) + '</td></tr>';
+    });
+    return s + '</table>';
+  };
+
+  let html = '<div style="font-family:Arial,sans-serif;max-width:900px">'
+    + '<div style="background:#00008B;color:#fff;padding:14px 16px;font-size:18px;font-weight:bold">HSSE Safety – Daily Pending Work</div>'
+    + '<p style="font-size:13px;color:#555">' + dateTxt + ' · ' + tasks.length + ' open task(s) · '
+    + '<b style="color:#d32f2f">' + overdue.length + ' overdue</b> · <b style="color:#ef6c00">' + soon.length + ' due within 2 days</b></p>';
+  if (!tasks.length) {
+    html += '<p>Good news – there is no pending work today. ✅</p>';
+  } else {
+    html += table(overdue, 'Overdue', '#d32f2f') + table(soon, 'Due within 2 days', '#ef6c00') + table(tasks, 'All pending work', '#00008B');
+    html += '<h3 style="color:#00008B;margin:18px 0 6px">Per person</h3><table style="border-collapse:collapse"><tr><th ' + th
+      + '>Person</th><th ' + th + '>Open</th><th ' + th + '>Overdue</th></tr>';
+    Object.keys(people).sort().forEach(function (n) {
+      html += '<tr><td ' + td + '>' + esc_(n) + '</td><td ' + td + '>' + people[n].open + '</td><td ' + td
+        + (people[n].late ? ' style="color:#d32f2f;font-weight:bold;border-bottom:1px solid #ddd;padding:6px"' : '') + '>' + people[n].late + '</td></tr>';
+    });
+    html += '</table>';
+  }
+  html += '<p style="font-size:12px;color:#888;margin-top:20px">Full list: <a href="' + ss.getUrl() + '">HSSE Safety Records</a> (Task Updates tab).</p></div>';
+
+  MailApp.sendEmail({ to: REMINDER_TO, subject: subject, htmlBody: html, name: 'HSSE Task Reminder' });
+  Logger.log('Sent "' + subject + '" to ' + REMINDER_TO);
+}
+
+function dueDate_(d, t, sheetTz) {
+  if (!d) return null;
+  const day = d instanceof Date ? Utilities.formatDate(d, sheetTz, 'yyyy-MM-dd') : String(d).trim().replace(/^'/, '');
+  let time = t instanceof Date ? Utilities.formatDate(t, sheetTz, 'HH:mm') : String(t || '').trim();
+  if (!/^\d{1,2}:\d{2}$/.test(time)) time = '17:00';
+  if (time.length === 4) time = '0' + time;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) return null;
+  const out = new Date(day + 'T' + time + ':00+08:00');
+  return isNaN(out) ? null : out;
+}
+function remainTxt_(ms) {
+  if (ms == null) return '-';
+  const a = Math.abs(ms), d = Math.floor(a / 86400000), h = Math.floor((a % 86400000) / 3600000);
+  const s = (d ? d + ' day' + (d > 1 ? 's ' : ' ') : '') + h + ' h';
+  return ms < 0 ? '<b style="color:#d32f2f">Overdue by ' + s + '</b>' : s + ' left';
+}
+function esc_(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }

@@ -51,3 +51,16 @@ Open the app link → **Sign in** with email and password → change the startin
 - "Who has access: Anyone" only lets the app reach the script without a Google sign-in. Nothing is saved or shown without a valid team sign-in, and passwords are never stored in readable form.
 - **Updating the script later:** paste the new code, then *Deploy → Manage deployments → Edit (pencil) → Version: New version → Deploy*. The URL stays the same.
 - **Limits (free Google account):** one upload up to about 50 MB (an audit with 25 photos is about 6 MB); about 90 minutes of script time per day, roughly 1,000+ uploads.
+
+## Daily pending-work email (task reminder)
+
+Every working day (Monday to Friday) at about 8:30 AM Malaysia time, the script emails one summary of all
+pending tasks to `shaifulsyazwan@octagonmaju.com.my`: overdue and due-within-2-days tasks on top, then all open
+tasks, then how many open and overdue tasks each person has.
+
+1. Open the Apps Script project and paste the latest `google-drive/Code.gs` (then click **Save**).
+2. In the function menu at the top, choose **sendDailyTaskReminder** and click **Run** to send a test email now.
+   The first time, Google asks you to allow sending email. Click **Allow**.
+3. Choose **startDailyReminder** and click **Run** once. The daily email is now on.
+
+To stop it, run **stopDailyReminder**. To change the address, edit `REMINDER_TO` at the bottom of `Code.gs`.
