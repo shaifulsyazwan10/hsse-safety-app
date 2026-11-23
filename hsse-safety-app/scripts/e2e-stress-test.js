@@ -41,7 +41,7 @@ const srv=http.createServer((q,r)=>{r.writeHead(200,{'content-type':'text/html'}
  await noOverflow('Site audits list');
 
  // ---------- SITE AUDIT ----------
- await p.click('#btnNew');await p.waitForTimeout(200);
+ await p.click('[data-tab="list"]');await p.click('#btnNew');await p.waitForTimeout(200);
  await p.click('#btnSubmit');let modal=await p.textContent('#modal');
  ok('Empty audit cannot be submitted',/Complete the audit first/.test(modal));
  ok('Missing list names all required details',['Location site','Client','Work conducted','Audit by','Sharing photo','Name of Site Engineer','Team Contractor','Auditor signature','Choose Yes / No for 17 sections'].every(t=>modal.includes(t)),modal.slice(0,300));
@@ -151,7 +151,7 @@ const srv=http.createServer((q,r)=>{r.writeHead(200,{'content-type':'text/html'}
 
  // ---------- DESKTOP + DARK ----------
  const dctx=await b.newContext({viewport:{width:1366,height:900},colorScheme:'dark'});const dp=await dctx.newPage();const derrs=[];dp.on('pageerror',e=>derrs.push(e.message));
- await dp.addInitScript(MOCK);await dp.goto('http://localhost:8765/');await dp.waitForTimeout(400);await dp.click('#btnNew');await dp.click('[data-secon="wah"][data-val="1"]');await dp.click('[data-q="wah1"] [data-ans="N"]');
+ await dp.addInitScript(MOCK);await dp.goto('http://localhost:8765/');await dp.waitForTimeout(400);await dp.click('[data-tab="list"]');await dp.click('#btnNew');await dp.click('[data-secon="wah"][data-val="1"]');await dp.click('[data-q="wah1"] [data-ans="N"]');
  await dp.screenshot({path:QA+'/desktop-dark.png'});
  const contrast=await dp.evaluate(()=>{const l=document.querySelector('.fld label');return getComputedStyle(l).color});ok('Dark mode labels use light blue (readable)',contrast.includes('154, 168, 255'),contrast);
  ok('Desktop: no script errors',derrs.length===0,derrs.join('|'));

@@ -630,7 +630,7 @@ function go(v,id){
   view=v;
   if(id!==undefined){const a=audits.get(id);current=a?structuredClone(a):null}
   $("#btnHome").hidden=!(v==="form"||v==="report");
-  const tab=TABOF[v]||"list";$("#btnNew").textContent={dash:"+ New audit",list:"+ New audit",tasks:"+ New task",tb:"+ New toolbox",pa:"+ New audit",mv:"",plan:""}[tab];$("#btnNew").hidden=tab==="mv"||tab==="plan";$("#app").classList.toggle("wide",v==="dash"||v==="mv");
+  const tab=TABOF[v]||"list";$("#btnNew").textContent={dash:"+ New audit",list:"+ New audit",tasks:"+ New task",tb:"+ New toolbox",pa:"+ New audit",mv:"",plan:""}[tab];$("#btnNew").hidden=tab==="mv"||tab==="plan"||tab==="dash";$("#app").classList.toggle("wide",v==="dash"||v==="mv");
   document.querySelectorAll("[data-tab]").forEach(b=>b.setAttribute("aria-current",String(b.dataset.tab===tab)));
   $("#scorebar").hidden=v!=="form";
   if(v!=="form")setSave("");
