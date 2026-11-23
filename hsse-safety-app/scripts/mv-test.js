@@ -3,6 +3,7 @@ const QA=__dirname,SP=path.resolve(QA,'..');const res=[];const ok=(n,c,i='')=>{r
 const GAS='http://127.0.0.1:8790/';const XL='/tmp/claude-0/-home-user-hsse-safety-app/fdfedc96-6536-5042-81f9-a8e7aef3a988/scratchpad/xlsx/mp.xlsx';
 const srv=http.createServer((q,r)=>{if(q.url.startsWith('/drive-config.js')){r.writeHead(200,{'content-type':'text/javascript'});return r.end('window.HSSE_DRIVE_URL="'+GAS+'";')}
   r.writeHead(200,{'content-type':'text/html'});r.end(fs.readFileSync('/home/user/hsse-safety-app/docs/index.html'))}).listen(8775);
+const MON=(()=>{const d=new Date();d.setDate(d.getDate()-((d.getDay()+6)%7));return d.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'})})();
 (async()=>{await fetch(GAS+'admin?email=shaifulsyazwan%40octagonmaju.com.my&v=Start1234');await fetch(GAS+'admin?email=hsse7%40octagonmaju.com.my&v=Masitah123');
  const b=await chromium.launch();const errs=[];
  const dev=async(opt,em,pw)=>{const c=await b.newContext({...opt,acceptDownloads:true});await c.addInitScript(()=>{window.HSSE_DRIVE_TEST=true});const p=await c.newPage();p.on('pageerror',e=>errs.push(e.message));
@@ -12,16 +13,16 @@ const srv=http.createServer((q,r)=>{if(q.url.startsWith('/drive-config.js')){r.w
    return {c,p}};
  const idle=async p=>{for(let i=0;i<60;i++){const n=await p.evaluate(async()=>(await driveQueue()).length);if(!n)return;await p.waitForTimeout(500)}};
  const S=await dev({viewport:{width:1366,height:900}},'shaifulsyazwan@octagonmaju.com.my','Start1234');
- await S.p.click('[data-tab="mv"]');ok('Movement tab opens on this week (Mon 16 Nov 2026)',(await S.p.textContent('h1+.muted')).includes('16 Nov 2026'));
+ await S.p.click('[data-tab="mv"]');ok('Movement tab opens on this week',(await S.p.textContent('h1+.muted')).includes('Week of '+MON),MON);
  ok('Shaiful sees Import from Excel',await S.p.isVisible('#mvImport'));ok('"+ New" button is hidden on this tab',!(await S.p.isVisible('#btnNew')));
  const [fc]=await Promise.all([S.p.waitForEvent('filechooser'),S.p.click('#mvImport')]);await fc.setFiles(XL);await S.p.waitForSelector('#mOk',{timeout:20000});
  const m=await S.p.textContent('#modal');ok('Excel file: 5 weeks found',m.includes('Import 5 weeks'),m.slice(0,140));await S.p.click('#mOk');await S.p.waitForTimeout(800);
- ok('After import it shows this week',(await S.p.textContent('h1+.muted')).includes('16 Nov'));
+ ok('After import it shows this week',(await S.p.textContent('h1+.muted')).includes('Week of '+MON));
  await S.p.click('[data-mvw="2026-11-16"]');
  const cell=S.p.locator('.mv [data-mvc="1:0"]');ok('Shaiful Monday 16 Nov = EL, coloured as leave',(await cell.textContent()).trim()==='EL'&&(await cell.getAttribute('class')).includes('k-leave'));
  ok('Multi-line entries kept',(await S.p.locator('.mv [data-mvc="1:2"]').textContent()).includes('Petron Ofc - Meeting'));
  ok('Site tasks coloured green (from Excel fill)',(await S.p.locator('.mv [data-mvc="3:1"]').getAttribute('class')).includes('k-site'));
- ok('Today column highlighted',(await S.p.locator('thead th.mv-today').count())===2);
+ await S.p.click('#mvNow');ok('Today column highlighted',(await S.p.locator('thead th.mv-today').count())===2);ok('Table text is centred',await S.p.evaluate(()=>getComputedStyle(document.querySelector('.mv td.mv-cell')).textAlign==='center'&&getComputedStyle(document.querySelector('.mv thead th')).textAlign==='center'));await S.p.click('[data-mvw="2026-11-16"]');
  await S.p.click('.mv [data-mvc="2:3"]');await S.p.fill('#mv_t','PS Karak – Site audit');await S.p.click('.mv-kinds [data-k="site"]');await S.p.click('#mOk');await S.p.waitForTimeout(400);
  ok('Edit a cell',(await S.p.locator('.mv [data-mvc="2:3"]').textContent()).includes('PS Karak')&&(await S.p.locator('.mv [data-mvc="2:3"]').getAttribute('class')).includes('k-site'));
  await S.p.click('#mvNext');await S.p.click('#mvNext');ok('Empty future week offers "Create this week\'s plan"',await S.p.isVisible('#mvCreate'));
