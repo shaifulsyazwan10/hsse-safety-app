@@ -16,7 +16,9 @@
  *
  * 3. SYNC: the full record (without photo bytes) is kept in the "Data" tab so every phone and computer that
  *    signs in gets the same tasks, toolbox meetings and submitted audits. Photos are read back from Drive.
- * 4. NEWS: every day at 6 AM (Malaysia time) the latest DOSH, DOE, workplace-accident and safety & health
+ * 4. EMAIL: Monday–Friday 8:30 AM (Malaysia time) a task update goes to every Active person in "Users";
+ *    a new task created by Shaiful for someone else is emailed to that person straight away.
+ * 5. NEWS: every day at 6 AM (Malaysia time) the latest DOSH, DOE, workplace-accident and safety & health
  *    news in Malaysia is collected from Google News into the "News" tab and shown on the app's dashboard.
  *
  * Setup: see GOOGLE-DRIVE-SETUP.md. Run setup() once, then Deploy > New deployment > Web app
@@ -34,6 +36,9 @@ const START_USERS = [
 ];
 const SESSION_DAYS = 30;
 const MOVEMENT_EDITORS = ['shaifulsyazwan@octagonmaju.com.my']; // who can change the Movement planning
+const TASK_NOTIFY_FROM = ['shaifulsyazwan@octagonmaju.com.my'];  // new tasks created by these accounts are emailed to the person assigned
+const APP_URL = 'https://shaifulsyazwan10.github.io/hsse-safety-app/';
+const TZ = 'Asia/Kuala_Lumpur';
 
 function setup() {
   const props = PropertiesService.getScriptProperties();
@@ -43,6 +48,7 @@ function setup() {
   Object.keys(TYPES).forEach(function (t) { child_(root, TYPES[t]); tab_(ss, TYPES[t]); });
   users_(ss);
   setupNews();
+  setupEmails();
   Logger.log('Drive folder: ' + root.getUrl());
   Logger.log('Records sheet (add passwords in the "Users" tab): ' + ss.getUrl());
 }
@@ -122,8 +128,11 @@ function doPost(e) {
     row.push(['Saved by', who.name]);
     row.push(['Saved to Drive', new Date()]);
     writeRow_(tab, rowIdx, p.id, row);
+    const firstSave = p.type === 'task' && p.record && !dataRowExists_(ss, 'task', p.id);
     if (p.record) saveData_(ss, p.type, p.id, false, linkPhotos_(p.record, fileIds), pdfUrl, sheetUrl);
-    return out_({ ok: true, pdfUrl: pdfUrl, folderUrl: folderUrl, sheetUrl: sheetUrl });
+    let notified = '';
+    if (firstSave && p.record.newTaskNotify) { try { notified = notifyNewTask_(ss, p.record, who); } catch (e) {} }
+    return out_({ ok: true, pdfUrl: pdfUrl, folderUrl: folderUrl, sheetUrl: sheetUrl, notified: notified || '' });
   } catch (err) {
     return out_({ ok: false, error: String(err && err.message || err) });
   } finally {
@@ -408,4 +417,118 @@ function photo_(id) {
     const b = DriveApp.getFileById(String(id)).getBlob();
     return { ok: true, type: b.getContentType() || 'image/jpeg', data: Utilities.base64Encode(b.getBytes()) };
   } catch (e) { return { ok: false, error: 'photo not found' }; }
+}
+
+/* ---------- task emails ---------- */
+/** Creates the Monday–Friday 8:30 AM task update. setup() runs it for you. */
+function setupEmails() {
+  ScriptApp.getProjectTriggers().forEach(function (t) { if (t.getHandlerFunction() === 'sendTaskDigest') ScriptApp.deleteTrigger(t); });
+  ScriptApp.newTrigger('sendTaskDigest').timeBased().everyDays(1).atHour(8).nearMinute(30).inTimezone(TZ).create();
+}
+/** Runs every day at about 8:30 AM; sends only Monday to Friday. */
+function sendTaskDigest() {
+  const dow = Number(Utilities.formatDate(new Date(), TZ, 'u')); // 1 = Monday … 7 = Sunday
+  if (dow > 5) return;
+  sendTaskDigestNow();
+}
+/** Sends the task update now (use this to test). */
+function sendTaskDigestNow() {
+  const ss = sheet_();
+  const to = teamEmails_(ss);
+  if (!to.length) return;
+  const tasks = dataRecords_(ss, 'task');
+  const now = new Date();
+  const dueAt = function (t) { return t.due ? new Date(t.due + 'T' + (t.dueTime || '17:00') + ':00+08:00') : null; };
+  const open = tasks.filter(function (t) { return t.status !== 'C'; });
+  const over = open.filter(function (t) { const d = dueAt(t); return d && d < now; });
+  const soon = open.filter(function (t) { const d = dueAt(t); return d && d >= now && d - now <= 2 * 864e5; });
+  const back = Number(Utilities.formatDate(now, TZ, 'u')) === 1 ? 3 : 1; // Monday looks back over the weekend
+  const done = tasks.filter(function (t) { return t.status === 'C' && t.completedAt && now - new Date(t.completedAt) <= back * 864e5; });
+  const pr = { H: 0, M: 1, L: 2 };
+  open.sort(function (a, b) { return (pr[a.priority || 'M'] - pr[b.priority || 'M']) || ((dueAt(a) || 8e15) - (dueAt(b) || 8e15)); });
+  const day = Utilities.formatDate(now, TZ, 'EEE d MMM yyyy');
+  const subject = (over.length ? '[' + over.length + ' overdue] ' : '') + 'HSSE Task Update – ' + day;
+  const P = { H: ['High', '#c62f2f', '#fff'], M: ['Medium', '#f2b300', '#1b1400'], L: ['Low', '#1f8a4c', '#fff'] };
+  const S = { P: 'Pending', O: 'On going', C: 'Complete' };
+  const esc = function (x) { return String(x == null ? '' : x).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); };
+  const left = function (t) {
+    const d = dueAt(t); if (!d) return ''; let ms = d - now; const o = ms < 0; ms = Math.abs(ms);
+    const dd = Math.floor(ms / 864e5), h = Math.floor(ms % 864e5 / 36e5), mi = Math.floor(ms % 36e5 / 6e4);
+    const span = dd ? dd + ' day' + (dd > 1 ? 's' : '') + ' ' + h + ' h' : h ? h + ' h ' + mi + ' min' : mi + ' min';
+    return o ? 'Overdue by ' + span : span + ' left';
+  };
+  const note = function (t) { const l = (t.log || [])[(t.log || []).length - 1]; return l && l.note ? l.note : ''; };
+  const table = function (list) {
+    if (!list.length) return '<p style="color:#4b5a68;margin:6px 0 14px">None.</p>';
+    return '<table style="border-collapse:collapse;width:100%;font-size:13px;margin:6px 0 16px">' +
+      '<tr style="background:#eef1f4;text-align:left"><th style="padding:6px">Task</th><th style="padding:6px">Priority</th><th style="padding:6px">Assigned to</th><th style="padding:6px">Status</th><th style="padding:6px">%</th><th style="padding:6px">Due</th><th style="padding:6px">Remaining</th><th style="padding:6px">Latest update</th></tr>' +
+      list.map(function (t) {
+        const p = P[t.priority || 'M']; const d = dueAt(t); const r = left(t);
+        return '<tr style="border-top:1px solid #d6dde4"><td style="padding:6px"><b>' + esc(t.title) + '</b></td>' +
+          '<td style="padding:6px"><span style="background:' + p[1] + ';color:' + p[2] + ';padding:2px 8px;border-radius:10px;font-weight:700;font-size:12px">' + p[0] + '</span></td>' +
+          '<td style="padding:6px">' + esc(t.assignee) + '</td><td style="padding:6px">' + S[t.status] + '</td><td style="padding:6px">' + (t.pct || 0) + '%</td>' +
+          '<td style="padding:6px;white-space:nowrap">' + (d ? Utilities.formatDate(d, TZ, 'd MMM yyyy, HH:mm') : '') + '</td>' +
+          '<td style="padding:6px;' + (/Overdue/.test(r) ? 'color:#c62f2f;font-weight:700' : '') + '">' + r + '</td><td style="padding:6px">' + esc(note(t)) + '</td></tr>';
+      }).join('') + '</table>';
+  };
+  const people = teamNames_(ss).map(function (n) {
+    const mine = open.filter(function (t) { return t.assignee === n; }); const mo = mine.filter(function (t) { return over.indexOf(t) >= 0; });
+    return '<li>' + esc(n) + ': ' + mine.length + ' open' + (mo.length ? ', <b style="color:#c62f2f">' + mo.length + ' overdue</b>' : '') + '</li>';
+  }).join('');
+  const html = '<div style="font-family:Arial,sans-serif;max-width:720px;color:#16222e">' +
+    '<div style="background:#00008B;color:#fff;padding:14px 18px;border-bottom:4px solid #f2b300"><b style="font-size:18px">HSSE Safety – Task Update</b><br><span style="font-size:13px">' + day + '</span></div>' +
+    '<p style="font-size:14px">Pending <b>' + open.filter(function (t) { return t.status === 'P'; }).length + '</b> · On going <b>' + open.filter(function (t) { return t.status === 'O'; }).length +
+    '</b> · Complete <b>' + tasks.filter(function (t) { return t.status === 'C'; }).length + '</b> · Overdue <b style="color:#c62f2f">' + over.length + '</b></p>' +
+    (over.length ? '<h3 style="color:#c62f2f;margin:14px 0 0">Overdue</h3>' + table(over) : '') +
+    (soon.length ? '<h3 style="color:#b07a00;margin:14px 0 0">Due within 2 days</h3>' + table(soon) : '') +
+    '<h3 style="color:#00008B;margin:14px 0 0">All open tasks</h3>' + table(open) +
+    (done.length ? '<h3 style="color:#1f8a4c;margin:14px 0 0">Completed ' + (back === 3 ? 'since Friday' : 'since yesterday') + '</h3><ul>' + done.map(function (t) { return '<li><b>' + esc(t.title) + '</b> – ' + esc(t.assignee) + (note(t) ? ' · ' + esc(note(t)) : '') + '</li>'; }).join('') + '</ul>' : '') +
+    '<h3 style="color:#00008B;margin:14px 0 0">By person</h3><ul>' + people + '</ul>' +
+    '<p style="font-size:13px;margin-top:18px">Update your tasks in the HSSE Safety app: <a href="' + APP_URL + '#tasks">' + APP_URL + '</a></p>' +
+    '<p style="font-size:12px;color:#7a8896">Automated email – sent Monday to Friday at 8:30 AM.</p></div>';
+  const text = 'HSSE Task Update – ' + day + '\nOpen ' + open.length + ', overdue ' + over.length + '.\n\n' +
+    open.map(function (t) { return '- ' + t.title + ' (' + P[t.priority || 'M'][0] + ', ' + t.assignee + ', ' + S[t.status] + ' ' + (t.pct || 0) + '%, ' + left(t) + ')'; }).join('\n') +
+    '\n\nUpdate your tasks: ' + APP_URL + '#tasks';
+  MailApp.sendEmail({ to: to.join(','), subject: subject, htmlBody: html, body: text, name: 'HSSE Safety' });
+}
+function notifyNewTask_(ss, t, who) {
+  if (TASK_NOTIFY_FROM.indexOf(who.email) < 0) return '';
+  const email = emailForName_(ss, t.assignee);
+  if (!email || email === who.email) return '';
+  const P = { H: 'High', M: 'Medium', L: 'Low' };
+  const due = t.due ? Utilities.formatDate(new Date(t.due + 'T' + (t.dueTime || '17:00') + ':00+08:00'), TZ, 'EEE d MMM yyyy, HH:mm') : '–';
+  const esc = function (x) { return String(x == null ? '' : x).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); };
+  const html = '<div style="font-family:Arial,sans-serif;max-width:600px;color:#16222e">' +
+    '<div style="background:#00008B;color:#fff;padding:14px 18px;border-bottom:4px solid #f2b300"><b style="font-size:18px">New HSSE task for you</b></div>' +
+    '<p>' + esc(who.name) + ' has assigned you a task:</p>' +
+    '<table style="font-size:14px;border-collapse:collapse"><tr><td style="padding:4px 12px 4px 0;color:#4b5a68">Task</td><td><b>' + esc(t.title) + '</b></td></tr>' +
+    (t.desc ? '<tr><td style="padding:4px 12px 4px 0;color:#4b5a68">Details</td><td>' + esc(t.desc) + '</td></tr>' : '') +
+    '<tr><td style="padding:4px 12px 4px 0;color:#4b5a68">Priority</td><td>' + (P[t.priority || 'M']) + '</td></tr>' +
+    '<tr><td style="padding:4px 12px 4px 0;color:#4b5a68">Date to complete</td><td>' + due + '</td></tr></table>' +
+    '<p><a href="' + APP_URL + '#tasks" style="background:#00008B;color:#fff;padding:10px 16px;border-radius:6px;text-decoration:none;display:inline-block">Open Task updates</a></p>' +
+    '<p style="font-size:12px;color:#7a8896">Automated email from the HSSE Safety app.</p></div>';
+  MailApp.sendEmail({ to: email, subject: 'New HSSE task: ' + t.title + ' (due ' + due + ')', htmlBody: html,
+    body: who.name + ' has assigned you a task: ' + t.title + '\nPriority: ' + P[t.priority || 'M'] + '\nDue: ' + due + (t.desc ? '\nDetails: ' + t.desc : '') + '\n\nOpen the app: ' + APP_URL + '#tasks', name: 'HSSE Safety' });
+  return t.assignee;
+}
+function teamRows_(ss) { const sh = users_(ss); const lr = sh.getLastRow(); return lr > 1 ? sh.getRange(2, 1, lr - 1, USER_COLS.length).getValues().filter(function (r) { return r[0] && active_(r[2]); }) : []; }
+function teamEmails_(ss) { return teamRows_(ss).map(function (r) { return String(r[0]).trim().toLowerCase(); }); }
+function teamNames_(ss) { return teamRows_(ss).map(function (r) { return String(r[1] || r[0]).trim(); }); }
+function emailForName_(ss, name) {
+  const n = String(name || '').trim().toLowerCase(); if (!n) return '';
+  const rows = teamRows_(ss);
+  let r = rows.filter(function (x) { return String(x[1]).trim().toLowerCase() === n; })[0];
+  if (!r) r = rows.filter(function (x) { const f = String(x[1]).trim().toLowerCase(); return f && (f.indexOf(n) === 0 || n.indexOf(f) === 0); })[0];
+  return r ? String(r[0]).trim().toLowerCase() : '';
+}
+function dataRowExists_(ss, type, id) {
+  const sh = data_(ss); const lr = sh.getLastRow(); if (lr < 2) return false;
+  const key = type + '_' + id; const keys = sh.getRange(2, 1, lr - 1, 1).getValues();
+  for (let i = 0; i < keys.length; i++) if (keys[i][0] === key) return true;
+  return false;
+}
+function dataRecords_(ss, type) {
+  const sh = data_(ss); const lr = sh.getLastRow(), lc = sh.getLastColumn(); if (lr < 2) return [];
+  return sh.getRange(2, 1, lr - 1, lc).getValues().filter(function (r) { return r[1] === type && !r[4] && Number(r[7]); })
+    .map(function (r) { try { return JSON.parse(r.slice(8, 8 + Number(r[7])).join('')); } catch (e) { return null; } }).filter(Boolean);
 }

@@ -1157,7 +1157,9 @@ function renderTaskEdit(){
     t.completedAt=t.status==="C"?(prev?.status==="C"?prev.completedAt:now):null;t.updatedAt=now;
     const wasNew=t._new;delete t._new;
     const btn=$("#t_save");btn.disabled=true;
-    try{await saveTask(structuredClone(t));go("tasks");toast(wasNew?"Task created":"Task updated");driveSend("task",t.id)}
+    const notify=wasNew&&driveAvail()&&session&&MOVEMENT_EDITORS.includes(String(session.email||"").toLowerCase())&&t.assignee&&t.assignee!==session.name;
+    if(wasNew)t.newTaskNotify=true;
+    try{await saveTask(structuredClone(t));go("tasks");toast(wasNew?(notify?`Task created – ${t.assignee} will get an email`:"Task created"):"Task updated");driveSend("task",t.id)}
     catch(e){t._new=wasNew;btn.disabled=false;toast(e?.code==="invalid_argument"?"You have view-only access – not saved":"Not saved – check connection")}
   };
 }
@@ -1439,7 +1441,7 @@ async function processDriveQueue(){
       const it=q[0];let res,p;
       try{p=await buildDrivePayload(it.type,it.id);res=await callServer(driveUrl,{...p,token:session.token});
         driveLog.set(it.type+"_"+it.id,{at:new Date().toISOString(),pdfUrl:res.pdfUrl||"",folderUrl:res.folderUrl||"",sheetUrl:res.sheetUrl||"",deleted:!!p.deleted});await saveDriveLog();
-        if(!p.deleted)toast(`${DTYPE[it.type]} saved to Google Drive`);}
+        if(!p.deleted)toast(`${DTYPE[it.type]} saved to Google Drive${res.notified?` – ${res.notified} notified by email`:""}`);}
       catch(e){if(/HSSE manager/.test(e.message||"")){toast(e.message);q=(await driveQueue()).filter(x=>!(x.type===it.type&&x.id===it.id));await driveQueueSet(q);continue}
         if(e.code==="signed out"){session=null;await devPut("session",null);showLogin("Your sign-in has ended. Please sign in again – your records are safe on this device.")}break}
       q=(await driveQueue()).filter(x=>!(x.type===it.type&&x.id===it.id&&x.at<=it.at));await driveQueueSet(q);

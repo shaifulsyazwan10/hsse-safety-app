@@ -27,6 +27,7 @@ const ctx={
   DriveApp:{getRootFolder:()=>rootF,getFolderById:id=>{const f=folders.get(id);if(!f)throw new Error('no folder');return wrapF(f)},getFileById:id=>{const f=files.get(id);if(!f)throw new Error('no file');return wrapFile(f)}},
   SpreadsheetApp:{create:n=>SS(n),openById:id=>wrapSS(sheets.get(id))},
   Utilities:{getUuid:()=>require('crypto').randomUUID(),base64Decode:s=>Buffer.from(s,'base64'),
+    formatDate:(d,tz,f)=>{const p=Object.fromEntries(new Intl.DateTimeFormat('en-GB',{timeZone:tz,weekday:'short',day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit',hour12:false}).formatToParts(d).map(x=>[x.type,x.value]));const dow={Mon:1,Tue:2,Wed:3,Thu:4,Fri:5,Sat:6,Sun:7}[p.weekday];if(f==='u')return String(dow);return f.replace('EEE',p.weekday).replace('d MMM yyyy',p.day+' '+p.month+' '+p.year).replace('HH:mm',p.hour+':'+p.minute)},
     newBlob:(bytes,type,name)=>({bytes,type,name,getDataAsString:()=>Buffer.from(bytes).toString('utf8')}),
     DigestAlgorithm:{SHA_256:'sha256'},Charset:{UTF_8:'utf8'},
     computeDigest:(alg,v)=>[...require('crypto').createHash('sha256').update(typeof v==='string'?Buffer.from(v,'utf8'):Buffer.from(v.map(b=>b&255))).digest()].map(b=>b>127?b-256:b),
@@ -43,7 +44,8 @@ const ctx={
     else if(q.includes('workplace accident'))items=mk(ms?'TEST Pekerja maut di kilang':'TEST Worker killed at factory','Test Star',2)+mk('TEST Worker killed at factory','Test Star',2)+mk('TEST old accident','Test Star',24*60);
     else items=mk('TEST NIOSH safety week <![CDATA[special]]>','Test Post',40);
     return {getResponseCode:()=>200,getContentText:()=>`<?xml version="1.0"?><rss><channel><title>x</title>${items}</channel></rss>`}}},
-  ScriptApp:{getProjectTriggers:()=>[],deleteTrigger:()=>{},newTrigger:()=>{const o={timeBased:()=>o,everyDays:()=>o,atHour:()=>o,inTimezone:()=>o,create:()=>{global.__trigger=true;return o}};return o}},
+  ScriptApp:{getProjectTriggers:()=>[],deleteTrigger:()=>{},newTrigger:()=>{const o={timeBased:()=>o,everyDays:()=>o,atHour:()=>o,nearMinute:()=>o,inTimezone:()=>o,create:()=>{global.__trigger=true;return o}};return o}},
+  MailApp:{sendEmail:o=>{(global.__mail=global.__mail||[]).push({to:o.to,subject:o.subject,html:o.htmlBody,body:o.body})}},
   LockService:{getScriptLock:()=>({waitLock:()=>{},releaseLock:()=>{}})},
   Logger:{log:m=>console.log('[gas] '+m)},console
 };
@@ -56,6 +58,8 @@ http.createServer((q,r)=>{const h={'access-control-allow-origin':'*','content-ty
     const i=t.rows.findIndex(r=>String(r[0]).toLowerCase()===u.searchParams.get('email'));const col=t.rows[0].indexOf(u.searchParams.get('col')||'New password');
     if(i<0){t.rows.push([u.searchParams.get('email'),u.searchParams.get('name')||'X','Yes']);}const row=t.rows[i<0?t.rows.length-1:i];row[col]=u.searchParams.get('v');cache.clear();r.writeHead(200,h);return r.end('{"ok":true}')}
   if(q.url==='/fetches'){r.writeHead(200,h);return r.end(JSON.stringify({fetches:global.__fetches||0,trigger:!!global.__trigger}))}
+  if(q.url==='/mail'){r.writeHead(200,h);return r.end(JSON.stringify(global.__mail||[]))}
+  if(q.url.startsWith('/run?')){const fn=new URL('http://x'+q.url).searchParams.get('fn');try{ctx[fn]();r.writeHead(200,h);return r.end('{"ok":true}')}catch(e){r.writeHead(500,h);return r.end(JSON.stringify({error:String(e.stack||e)}))}}
   if(q.url==='/state'){r.writeHead(200,h);const tree=f=>({name:f.name,trashed:f.trashed,files:f.files.filter(x=>!x.trashed).map(x=>x.name+' ('+x.size+')'),kids:f.kids.filter(k=>!k.trashed).map(tree)});
     const ss=[...sheets.values()][0];return r.end(JSON.stringify({tree:tree(rootF._raw),tabs:ss.tabs.map(t=>({name:t.name,rows:t.rows}))}))}
   let b='';q.on('data',d=>b+=d);q.on('end',()=>{try{const o=ctx.doPost({postData:{contents:b}});r.writeHead(200,h);r.end(o.text)}catch(e){r.writeHead(500,h);r.end(JSON.stringify({ok:false,error:String(e)}))}})

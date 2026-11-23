@@ -1,0 +1,35 @@
+const {chromium,devices}=require('playwright');const fs=require('fs');const http=require('http');const path=require('path');
+const QA=__dirname;const res=[];const ok=(n,c,i='')=>{res.push(!!c);console.log((c?'PASS ':'FAIL ')+n+(i?' — '+i:''))};
+const GAS='http://127.0.0.1:8790/';const mail=async()=>JSON.parse(await (await fetch(GAS+'mail')).text());
+const srv=http.createServer((q,r)=>{if(q.url.startsWith('/drive-config.js')){r.writeHead(200,{'content-type':'text/javascript'});return r.end('window.HSSE_DRIVE_URL="'+GAS+'";')}
+  r.writeHead(200,{'content-type':'text/html'});r.end(fs.readFileSync('/home/user/hsse-safety-app/docs/index.html'))}).listen(8776);
+(async()=>{await fetch(GAS+'admin?email=shaifulsyazwan%40octagonmaju.com.my&v=Start1234');await fetch(GAS+'admin?email=hsse7%40octagonmaju.com.my&v=Masitah123');
+ const b=await chromium.launch();const errs=[];
+ const dev=async(opt,em,pw)=>{const c=await b.newContext(opt);await c.addInitScript(()=>{window.HSSE_DRIVE_TEST=true});const p=await c.newPage();p.on('pageerror',e=>errs.push(e.message));
+   await p.goto('http://localhost:8776/');await p.waitForSelector('#li_email');await p.fill('#li_email',em);await p.fill('#li_pw',pw);await p.click('#li_go');await p.waitForTimeout(1500);
+   if(await p.isVisible('#ac_old')){await p.fill('#ac_old',pw);await p.fill('#ac_new',pw+'X');await p.fill('#ac_new2',pw+'X');await p.click('#ac_go');await p.waitForTimeout(400)}
+   return {c,p}};
+ const idle=async p=>{for(let i=0;i<60;i++){const n=await p.evaluate(async()=>(await driveQueue()).length);if(!n)return;await p.waitForTimeout(400)}};
+ const mk=async(p,title,who,due,pr='H')=>{await p.click('[data-tab="tasks"]');await p.click('#btnNew');await p.fill('#t_title',title);await p.fill('#t_desc','Check all units at Bay 2');await p.selectOption('#t_who',who);await p.click(`[data-tpr="${pr}"]`);await p.fill('#t_due',due);await p.click('#t_save');await p.waitForTimeout(300)};
+ const d=o=>{const x=new Date(Date.now()+o*864e5);return x.toISOString().slice(0,10)};
+ const S=await dev({viewport:{width:1300,height:900}},'shaifulsyazwan@octagonmaju.com.my','Start1234');await idle(S.p);
+ await mk(S.p,'Inspect fire extinguishers','Masitah',d(3));const t1=await S.p.textContent('#toast');await S.p.waitForFunction(()=>document.querySelector('#toast').textContent.includes('notified by email'),null,{timeout:15000}).catch(()=>{});const t2=await S.p.textContent('#toast');await idle(S.p);
+ let m=await mail();ok('Shaiful creates a task for Masitah → Masitah emailed straight away',m.length===1&&m[0].to==='hsse7@octagonmaju.com.my'&&m[0].subject.startsWith('New HSSE task: Inspect fire extinguishers'),m.map(x=>x.to+' | '+x.subject).join(' ; '));
+ ok('Email shows who assigned it, details, priority and due date',m[0]&&m[0].html.includes('Shaiful Syazwan has assigned you')&&m[0].html.includes('Check all units')&&m[0].html.includes('High'));
+ ok('App tells Shaiful the person will be / was emailed',(t1+t2).includes('Masitah notified by email')||((t1+t2).includes('Masitah will get an email')),t1+' | '+t2);
+ await mk(S.p,'Shaiful own task','Shaiful Syazwan',d(5),'L');await idle(S.p);
+ ok('No email when Shaiful assigns a task to himself',(await mail()).length===1);
+ await S.p.click('[data-tab="tasks"]');await S.p.locator('.task',{hasText:'Inspect fire extinguishers'}).click();await S.p.fill('#t_pctN','50');await S.p.click('#t_save');await S.p.waitForTimeout(300);await idle(S.p);
+ ok('No email when an existing task is updated',(await mail()).length===1);
+ await mk(S.p,'Overdue barricade','Ridzuan',d(-2),'M');await idle(S.p);
+ ok('Ridzuan emailed for his new task',(await mail()).some(x=>x.to==='hsse10@octagonmaju.com.my'));
+ const M=await dev({...devices['iPhone 13']},'hsse7@octagonmaju.com.my','Masitah123');await idle(M.p);const before=(await mail()).length;
+ await mk(M.p,'Masitah task for Ridzuan','Ridzuan',d(4));await idle(M.p);
+ ok('Tasks created by others do not send alerts',(await mail()).length===before);
+ await fetch(GAS+'run?fn=sendTaskDigestNow');m=await mail();const dg=m[m.length-1];
+ ok('Daily update goes to the whole team in one email',dg.subject.includes('HSSE Task Update')&&dg.to.split(',').length===3,dg.to);
+ ok('Subject flags overdue tasks',dg.subject.startsWith('[1 overdue]'),dg.subject);
+ ok('Update lists overdue, open tasks with priority, and per person',dg.html.includes('>Overdue<')&&dg.html.includes('Overdue barricade')&&dg.html.includes('Inspect fire extinguishers')&&dg.html.includes('By person')&&dg.html.includes('Masitah: '));
+ fs.writeFileSync(QA+'/digest.html',dg.html);fs.writeFileSync(QA+'/newtask.html',m[0].html);
+ ok('No script errors',errs.length===0,errs.slice(0,2).join('|'));
+ console.log(`${res.filter(Boolean).length}/${res.length} passed`);await b.close();srv.close()})().catch(e=>{console.error('CRASH',e);process.exit(1)});
