@@ -261,16 +261,17 @@ const REMINDER_TZ = 'Asia/Kuala_Lumpur';
 
 function startDailyReminder() {
   stopDailyReminder();
-  ScriptApp.newTrigger('dailyReminderTrigger_').timeBased().everyDays(1).atHour(8).nearMinute(30).inTimezone(REMINDER_TZ).create();
+  ScriptApp.newTrigger('dailyReminderTrigger').timeBased().everyDays(1).atHour(8).nearMinute(30).inTimezone(REMINDER_TZ).create();
   Logger.log('Daily reminder is ON: Mon–Fri about 8:30 AM to ' + REMINDER_TO);
 }
 function stopDailyReminder() {
   ScriptApp.getProjectTriggers().forEach(function (t) {
-    if (t.getHandlerFunction() === 'dailyReminderTrigger_') ScriptApp.deleteTrigger(t);
+    if (/^dailyReminderTrigger_?$/.test(t.getHandlerFunction())) ScriptApp.deleteTrigger(t);
   });
   Logger.log('Daily reminder is OFF.');
 }
-function dailyReminderTrigger_() {
+/** Run by the daily alarm (must not end in _ or Google cannot call it). */
+function dailyReminderTrigger() {
   const day = Utilities.formatDate(new Date(), REMINDER_TZ, 'u'); // 1 = Mon ... 7 = Sun
   if (day === '6' || day === '7') return;
   sendDailyTaskReminder();
