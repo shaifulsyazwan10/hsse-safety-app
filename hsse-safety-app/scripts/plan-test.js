@@ -23,13 +23,24 @@ const srv=http.createServer((q,r)=>{const u=decodeURIComponent(q.url.split('?')[
  ok('Cell notes kept (ERP drill: BA8 & BA6 in July)',(await S.p.textContent('.pl')).includes('BA8 & BA6'));
  const href=await S.p.getAttribute('.pl-files a','href');const pr=await (await fetch('http://localhost:8777/'+href)).arrayBuffer();
  ok('Attachment: HSSE Plan 2026.pdf opens',(await S.p.textContent('.pl-files')).includes('HSSE Plan 2026.pdf')&&Buffer.from(pr).slice(0,4).toString()==='%PDF',href);
- ok('Overall achieved shown',/\d+\.\d%/.test(await S.p.textContent('.tiles')),(await S.p.locator('.tile').first().textContent()));
+ const ov1=await S.p.locator('.tile .v').first().textContent();ok('Overall achieved shown',/\d+\.\d%/.test(ov1),ov1);
+ ok('Status calculated from plan/actual: monthly 8 of 12 = 66%, committee 2 of 4 = 50%',(await row('Updating HSSE Performance').textContent()).includes('66%')&&(await row('HSSE Committee Meeting').textContent()).includes('50%'));
+ ok('PDF-judged items kept as manual (LTW production 60%)',(await row('PRODUCTION WORKER').textContent()).includes('60%')&&(await row('PRODUCTION WORKER').textContent()).includes('manual'));
  // edit: Sep done for Updating HSSE Performance
  await S.p.evaluate(()=>{const r=[...document.querySelectorAll('.pl tr.pl-r1')].find(x=>x.textContent.includes('Updating HSSE Performance')).nextElementSibling;r.querySelectorAll('td.pl-m')[8].click()});
  await S.p.click('#plA [data-v="done"]');await S.p.fill('#plN','Sept report sent');await S.p.click('#mOk');await S.p.waitForTimeout(400);
  ok('Shaiful marks September as done',await S.p.evaluate(()=>{const r=[...document.querySelectorAll('.pl tr.pl-r1')].find(x=>x.textContent.includes('Updating HSSE Performance')).nextElementSibling;return r.querySelectorAll('td.pl-m')[8].classList.contains('pl-done')}));
- await row('Updating HSSE Performance').locator('[data-pli]').click();await S.p.fill('#plIp','75');await S.p.click('#mOk');await S.p.waitForTimeout(300);
- ok('Shaiful updates status %',(await row('Updating HSSE Performance').textContent()).includes('75%'));
+ ok('Ticking done updates status (9 of 12 = 75%)',(await row('Updating HSSE Performance').textContent()).includes('75%'));
+ const ov2=await S.p.locator('.tile .v').first().textContent();ok('Overall achieved updates',ov2!==ov1,ov1+' → '+ov2);
+ for(const m of [8,9,10,11]){await S.p.evaluate(m=>{const r=[...document.querySelectorAll('.pl tr.pl-r1')].find(x=>x.textContent.includes('Report Submission to Client')).nextElementSibling;r.querySelectorAll('td.pl-m')[m].click()},m);await S.p.click('#plA [data-v="done"]');await S.p.click('#mOk');await S.p.waitForTimeout(250)}
+ ok('Reaching 100% sets remark to COMPLETE automatically',(await row('Report Submission to Client').textContent()).includes('100%')&&(await row('Report Submission to Client').textContent()).includes('COMPLETE'));
+ await row('Machinery, Plant').locator('.pl-rm').click();await S.p.selectOption('#plIr','PLANNING ON DEC');await S.p.click('#mOk');await S.p.waitForTimeout(300);
+ ok('Remark chosen from a list',(await row('Machinery, Plant').textContent()).includes('PLANNING ON DEC'));
+ await row('Machinery, Plant').locator('.pl-rm').click();await S.p.selectOption('#plIr','__other');await S.p.fill('#plIro','Waiting for vendor');await S.p.click('#mOk');await S.p.waitForTimeout(300);
+ ok('Remark: Other (typed)',(await row('Machinery, Plant').textContent()).includes('WAITING FOR VENDOR'));
+ await row('ISO45001:2018 Audit').first().locator('.pl-st').click();await S.p.click('#plPm [data-v="manual"]');await S.p.fill('#plIp','40');await S.p.click('#mOk');await S.p.waitForTimeout(300);
+ ok('Status can be set manually',(await row('ISO45001:2018 Audit').first().textContent()).includes('40%'));
+ 
  await S.p.click('[data-pladd="9"]');await S.p.fill('#plIa','Install safety signage at all bays');await S.p.fill('#plIf','YEARLY');await S.p.click('#mOk');await S.p.waitForTimeout(300);
  ok('Shaiful adds a new action plan',(await S.p.textContent('.pl')).includes('Install safety signage'));
  const [fc]=await Promise.all([S.p.waitForEvent('filechooser'),S.p.click('#plAttAdd')]);await fc.setFiles(DOCS+'/attachments/HSSE_Plan_2026.pdf');await S.p.waitForTimeout(2500);
