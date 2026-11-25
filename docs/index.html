@@ -9,7 +9,7 @@
   --ink:#16222e; --ink-2:#4b5a68; --ink-3:#7a8896;
   --brand:#00008B; --brand-ink:#ffffff; --brand-fg:#00008B; --hivis:#f2b300; --hivis-ink:#1b1400;
   --ok:#1f8a4c; --ok-bg:#e3f4ea; --bad:#c62f2f; --bad-bg:#fbe6e5; --na:#6b7783; --na-bg:#e8ecef;
-  --focus:#2d7ff9; --mv-site:#c9ebb0; --mv-office:#fff3a3; --mv-leave:#f9c6c6; --mv-off:#eef1f4; --s1:#2a78d6; --s2:#eb6834; --s3:#1baf7a; --s4:#eda100;
+  --focus:#2d7ff9; --pl-plan:#cfe0ff; --pl-done:#16a34a; --pl-miss:#e02424; --mv-site:#c9ebb0; --mv-office:#fff3a3; --mv-leave:#f9c6c6; --mv-off:#eef1f4; --s1:#2a78d6; --s2:#eb6834; --s3:#1baf7a; --s4:#eda100;
   --f-display:"Barlow Condensed","Arial Narrow",Arial,sans-serif;
   --f-body:"Barlow",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
   --f-mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
@@ -19,13 +19,13 @@
   --ink:#e6edf3; --ink-2:#a9b6c2; --ink-3:#7d8b98;
   --brand:#00008B; --brand-ink:#ffffff; --brand-fg:#9aa8ff; --hivis:#f5c02a; --hivis-ink:#1b1400;
   --ok:#4cc27e; --ok-bg:#16301f; --bad:#ff6b63; --bad-bg:#3a1b1a; --na:#9aa6b1; --na-bg:#25313c;
-  --focus:#6fa8ff; --mv-site:#2b4a1c; --mv-office:#4a4212; --mv-leave:#4f2121; --mv-off:#1d2833; --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#c98500; color-scheme:dark}}
+  --focus:#6fa8ff; --pl-plan:#253f73; --pl-done:#1f9a4f; --pl-miss:#d33b3b; --mv-site:#2b4a1c; --mv-office:#4a4212; --mv-leave:#4f2121; --mv-off:#1d2833; --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#c98500; color-scheme:dark}}
 :root[data-theme="dark"]{
   --bg:#0f151b; --surface:#17202a; --surface-2:#1d2833; --line:#2c3a47;
   --ink:#e6edf3; --ink-2:#a9b6c2; --ink-3:#7d8b98;
   --brand:#00008B; --brand-ink:#ffffff; --brand-fg:#9aa8ff; --hivis:#f5c02a; --hivis-ink:#1b1400;
   --ok:#4cc27e; --ok-bg:#16301f; --bad:#ff6b63; --bad-bg:#3a1b1a; --na:#9aa6b1; --na-bg:#25313c;
-  --focus:#6fa8ff; --mv-site:#2b4a1c; --mv-office:#4a4212; --mv-leave:#4f2121; --mv-off:#1d2833; --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#c98500; color-scheme:dark}
+  --focus:#6fa8ff; --pl-plan:#253f73; --pl-done:#1f9a4f; --pl-miss:#d33b3b; --mv-site:#2b4a1c; --mv-office:#4a4212; --mv-leave:#4f2121; --mv-off:#1d2833; --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#c98500; color-scheme:dark}
 
 *{box-sizing:border-box}
 [hidden]{display:none!important}
@@ -167,7 +167,7 @@ h2{font-size:20px;text-transform:uppercase;letter-spacing:.05em}
 .q.missing .q-text::after{content:"  Answer required";color:var(--bad);font-size:13px;white-space:nowrap}
 .q.is-n textarea{border-color:var(--bad);background:var(--surface)}
 .q textarea.c-missing{border-width:2px;box-shadow:0 0 0 3px var(--bad-bg)}
-.pdfdoc{--mv-site:#c9ebb0;--mv-office:#fff3a3;--mv-leave:#f9c6c6;--mv-off:#eef1f4;position:fixed;left:-12000px;top:0;width:760px;display:flex;flex-direction:column;gap:14px;padding:0;
+.pdfdoc{--pl-plan:#cfe0ff;--pl-done:#16a34a;--pl-miss:#e02424;--mv-site:#c9ebb0;--mv-office:#fff3a3;--mv-leave:#f9c6c6;--mv-off:#eef1f4;position:fixed;left:-12000px;top:0;width:760px;display:flex;flex-direction:column;gap:14px;padding:0;
   --bg:#ffffff;--surface:#ffffff;--surface-2:#f5f7f9;--line:#d6dde4;--ink:#16222e;--ink-2:#4b5a68;--ink-3:#7a8896;
   --brand:#00008B;--brand-ink:#ffffff;--brand-fg:#00008B;--ok:#1f8a4c;--ok-bg:#e3f4ea;--bad:#c62f2f;--bad-bg:#fbe6e5;--na:#6b7783;--na-bg:#e8ecef;
   color-scheme:light;background:#fff;color:var(--ink)}
@@ -327,6 +327,42 @@ h2{font-size:20px;text-transform:uppercase;letter-spacing:.05em}
 .uc-stripe{height:22px;background:repeating-linear-gradient(-45deg,var(--hivis) 0 22px,#16222e 22px 44px)}
 .uc-body{padding:64px 16px 56px;display:flex;flex-direction:column;gap:10px;align-items:center}
 .uc-word{font-family:var(--f-display);font-weight:700;font-size:clamp(40px,10vw,96px);line-height:1;letter-spacing:.04em;color:var(--brand-fg);text-wrap:balance}
+/* HSSE plan */
+.pl-att .card-h{justify-content:space-between}.pl-att .pl-att-add{background:#fff;color:#00008B;border-style:solid}
+.pl-files{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.pl-files li{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.pl-files a{font-weight:700;color:var(--brand-fg)}
+.pl-fi{font-size:11px;font-weight:700;background:var(--bad);color:#fff;border-radius:4px;padding:3px 5px}
+.pl-card{padding:0}.pl-scroll{overflow-x:auto}
+.pl{border-collapse:separate;border-spacing:0;width:100%;min-width:1100px;font-size:12px}
+.pl th,.pl td{border-bottom:1px solid var(--line);border-right:1px solid var(--line);padding:5px 6px;vertical-align:middle;text-align:center}
+.pl thead th{background:var(--hivis);color:var(--hivis-ink);font-weight:700;position:sticky;top:0;z-index:1}
+.pl thead th.pl-cur{background:#00008B;color:#fff}
+.pl .pl-act{text-align:left;min-width:260px}.pl .pl-no{width:34px}.pl .pl-f{font-size:11px;width:90px}
+.pl .pl-pa{font-size:11px;color:var(--ink-2);width:44px;background:var(--surface-2)}
+.pl-sec th{background:#00008B;color:#fff;text-align:left;padding:7px 10px}
+.pl-sec-t{font-weight:700;letter-spacing:.03em}.pl-obj{font-weight:400;font-size:12px;opacity:.85;white-space:pre-line;margin-top:2px}
+.pl td.pl-m{width:44px;height:20px;padding:2px;font-size:10px;line-height:1.1}
+.pl td.pl-cur{box-shadow:inset 0 0 0 2px var(--hivis)}
+.pl-row-p.pl-p{background:var(--pl-plan)}.pl-row-a.pl-done{background:var(--pl-done);color:#fff}.pl-row-a.pl-missed{background:var(--pl-miss);color:#fff}
+.pl-row-p .pl-note{display:none}.pl-note{font-weight:700}
+.pl-r1 td{border-bottom-style:dashed}
+.pl .pl-st{width:64px}.pl-bar{height:5px;background:var(--surface-2);border-radius:3px;overflow:hidden;margin-top:3px}.pl-bar i{display:block;height:100%;background:var(--ok)}
+.pl .pl-rm{font-size:11px;font-weight:700;width:120px}.pl .pl-ok{background:var(--pl-done);color:#fff}
+.pl [role="button"]{cursor:pointer}.pl [role="button"]:hover{outline:2px solid var(--brand-fg);outline-offset:-2px}
+.mv-legend i.pl-p{background:var(--pl-plan)}.mv-legend i.pl-done{background:var(--pl-done)}.mv-legend i.pl-missed{background:var(--pl-miss)}
+.mv-kinds .chipbtn.pl-done[aria-pressed="true"]{background:var(--pl-done);color:#fff}.mv-kinds .chipbtn.pl-missed[aria-pressed="true"]{background:var(--pl-miss);color:#fff}
+.pl-cards{display:none;flex-direction:column;gap:10px}
+@media (max-width:760px){.pl-card{display:none}.pl-cards{display:flex}}
+.pl-cs{padding:0;overflow:hidden}.pl-cs-h{background:#00008B;color:#fff;padding:10px 12px;display:flex;flex-direction:column;gap:2px}.pl-cs-h span{font-size:12px;opacity:.85;white-space:pre-line}
+.pl-ci{padding:10px 12px;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:6px}
+.pl-ci-t{font-weight:700}.pl-ci-m{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:12px;color:var(--ink-2)}.pl-ci-pct{font-weight:700;color:var(--ink)}.pl-okt{color:var(--ok);font-weight:700}
+.pl-strip{display:grid;grid-template-columns:18px repeat(12,minmax(0,1fr));gap:2px;align-items:center}
+.pl-sh{font-size:10px;text-align:center;color:var(--ink-2)}.pl-curh{color:var(--ink);font-weight:700;background:var(--hivis);border-radius:3px}
+.pl-sl{font-size:10px;font-weight:700;color:var(--ink-2)}
+.pl-sq{height:16px;border-radius:3px;background:var(--surface-2);border:1px solid var(--line)}
+.pl-strip .pl-sq.pl-p{background:var(--pl-plan)}.pl-strip .pl-sq.pl-done{background:var(--pl-done);border-color:transparent}.pl-strip .pl-sq.pl-missed{background:var(--pl-miss);border-color:transparent}
+.pl-ci-n{font-size:12px;color:var(--ink-2)}
+.pdfdoc .pl{min-width:0;font-size:11px}.pdfdoc .pl td.pl-cur{box-shadow:none}.pdfdoc .pl thead th.pl-cur{background:var(--hivis);color:var(--hivis-ink)}.pdfdoc .pl .pl-act{min-width:0}
 .chips{display:flex;flex-wrap:wrap;gap:8px}
 .chipbtn{border:1px solid var(--line);background:var(--surface-2);border-radius:999px;padding:7px 13px;font-weight:600;font-size:14px;cursor:pointer;min-height:38px}
 .chipbtn[aria-pressed="true"]{background:var(--brand);color:var(--brand-ink);border-color:var(--brand)}
@@ -539,7 +575,7 @@ async function initCaps(){
   startShared(timer);
 }
 function startShared(timer){
-  subscribeTasks();subscribeTb();subscribePa();subscribeMv();
+  subscribeTasks();subscribeTb();subscribePa();subscribeMv();subscribePl();
   db.collection("audits").onSnapshot(snap=>{
     clearTimeout(timer);
     const m=new Map();snap.docs.forEach(d=>{if(d.exists){const v=d.data();m.set(v.id,v)}});
@@ -553,12 +589,12 @@ function startShared(timer){
 async function useLocal(){
   if(mode==="shared"&&loaded)return;
   mode="local";db=null;
-  const [A,T,B,PA,MV]=await Promise.all(["hsse-audits","hsse-tasks","hsse-toolbox","hsse-production","hsse-movement"].map(devGet));pas=new Map((PA||[]).map(r=>[r.id,r]));paLoaded=true;moves=new Map((MV||[]).map(r=>[r.id,r]));mvLoaded=true;
+  const [A,T,B,PA,MV,PL]=await Promise.all(["hsse-audits","hsse-tasks","hsse-toolbox","hsse-production","hsse-movement","hsse-plan"].map(devGet));pas=new Map((PA||[]).map(r=>[r.id,r]));paLoaded=true;moves=new Map((MV||[]).map(r=>[r.id,r]));mvLoaded=true;plans=new Map((PL||[]).map(r=>[r.id,r]));plLoaded=true;
   audits=new Map((A||[]).map(a=>[a.id,a]));tasks=new Map((T||[]).map(t=>[t.id,t]));tbs=new Map((B||[]).map(t=>[t.id,t]));loaded=tasksLoaded=tbLoaded=true;
   await loadDrive();
   if(needLogin()){showLogin();return}
   showAccountButton();
-  if(view==="list")renderList();if(view==="tasks")renderTasks();if(view==="tb")renderTb();if(view==="drive")renderDrive();if(view==="dash")renderDash();if(view==="mv")renderMv();
+  if(view==="list")renderList();if(view==="tasks")renderTasks();if(view==="tb")renderTb();if(view==="drive")renderDrive();if(view==="dash")renderDash();if(view==="mv")renderMv();if(view==="plan")renderPlan();
   processDriveQueue();pullSync();
 }
 let saveChain=Promise.resolve(), saveTimer=null, dirty=false;
@@ -630,7 +666,7 @@ function go(v,id){
   view=v;
   if(id!==undefined){const a=audits.get(id);current=a?structuredClone(a):null}
   $("#btnHome").hidden=!(v==="form"||v==="report");
-  const tab=TABOF[v]||"list";$("#btnNew").textContent={dash:"+ New audit",list:"+ New audit",tasks:"+ New task",tb:"+ New toolbox",pa:"+ New audit",mv:"",plan:""}[tab];$("#btnNew").hidden=tab==="mv"||tab==="plan"||tab==="dash";$("#app").classList.toggle("wide",v==="dash"||v==="mv");
+  const tab=TABOF[v]||"list";$("#btnNew").textContent={dash:"+ New audit",list:"+ New audit",tasks:"+ New task",tb:"+ New toolbox",pa:"+ New audit",mv:"",plan:""}[tab];$("#btnNew").hidden=tab==="mv"||tab==="plan"||tab==="dash";$("#app").classList.toggle("wide",v==="dash"||v==="mv"||v==="plan");
   document.querySelectorAll("[data-tab]").forEach(b=>b.setAttribute("aria-current",String(b.dataset.tab===tab)));
   $("#scorebar").hidden=v!=="form";
   if(v!=="form")setSave("");
@@ -1003,16 +1039,16 @@ function tbPdfArgs(t){
     body:tbBody(t),footer:`Toolbox Meeting · ${t.location||""}`,filename:`Toolbox-Meeting-${t.date}-${(t.time||"").replace(":","")}-${slug(t.location)||"Factory"}.pdf`};
 }
 function backupAll(){
-  const data={app:"hsse-safety",version:1,exportedAt:new Date().toISOString(),audits:[...audits.values()],tasks:[...tasks.values()],toolbox:[...tbs.values()],production:[...pas.values()],movement:[...moves.values()]};
+  const data={app:"hsse-safety",version:1,exportedAt:new Date().toISOString(),audits:[...audits.values()],tasks:[...tasks.values()],toolbox:[...tbs.values()],production:[...pas.values()],movement:[...moves.values()],hsseplan:[...plans.values()]};
   save(`hsse-safety-backup-${localDT(new Date()).slice(0,10)}.json`,JSON.stringify(data));
 }
 async function restoreAll(file){
   if(!file)return;let d;try{d=JSON.parse(await file.text())}catch(e){toast("This file is not an HSSE Safety backup");return}
   if(!d||d.app!=="hsse-safety"){toast("This file is not an HSSE Safety backup");return}
   const merge=(map,arr)=>{let n=0;for(const r of arr||[]){if(!r||!r.id)continue;const cur=map.get(r.id);if(!cur||(r.updatedAt||"")>(cur.updatedAt||"")){map.set(r.id,r);n++}}return n};
-  const n=merge(audits,d.audits)+merge(tasks,d.tasks)+merge(tbs,d.toolbox)+merge(pas,d.production)+merge(moves,d.movement);
-  try{if(mode==="shared"){for(const [c,m] of [["audits",audits],["tasks",tasks],["toolbox",tbs],["production",pas],["movement",moves]])for(const r of m.values())await db.collection(c).doc(r.id).set(r)}
-    else{await IDB.set("hsse-audits",[...audits.values()]);await IDB.set("hsse-tasks",[...tasks.values()]);await IDB.set("hsse-toolbox",[...tbs.values()]);await IDB.set("hsse-production",[...pas.values()]);await IDB.set("hsse-movement",[...moves.values()])}
+  const n=merge(audits,d.audits)+merge(tasks,d.tasks)+merge(tbs,d.toolbox)+merge(pas,d.production)+merge(moves,d.movement)+merge(plans,d.hsseplan);
+  try{if(mode==="shared"){for(const [c,m] of [["audits",audits],["tasks",tasks],["toolbox",tbs],["production",pas],["movement",moves],["hsseplan",plans]])for(const r of m.values())await db.collection(c).doc(r.id).set(r)}
+    else{await IDB.set("hsse-audits",[...audits.values()]);await IDB.set("hsse-tasks",[...tasks.values()]);await IDB.set("hsse-toolbox",[...tbs.values()]);await IDB.set("hsse-production",[...pas.values()]);await IDB.set("hsse-movement",[...moves.values()]);await IDB.set("hsse-plan",[...plans.values()])}
     toast(`Restored ${n} record${n===1?"":"s"}`)}catch(e){toast("Could not restore – storage is full or not available")}
   go(view);
 }
@@ -1354,7 +1390,7 @@ async function photoPayload(list){
 /* the full record travels with each upload so other devices can sync it; photos become placeholders for the uploaded files */
 async function buildDrivePayload(type,id){
   lastPhotoIdx=new Map();const p=await buildDrivePayload0(type,id);
-  const live=({audit:audits,task:tasks,toolbox:tbs,production:pas,movement:moves})[type]?.get(id);
+  const live=({audit:audits,task:tasks,toolbox:tbs,production:pas,movement:moves,hsseplan:plans})[type]?.get(id);
   if(p&&!p.deleted&&live){const idx=lastPhotoIdx;
     p.record=JSON.parse(JSON.stringify(live,(k,v)=>{if(v&&typeof v==="object"&&!Array.isArray(v)&&["a","d","i","g"].includes(v.k)&&("id" in v||"data" in v)){
       if(idx.has(v))return {k:"p",i:idx.get(v),name:v.name||""};return v.k==="g"?v:undefined}return v}));}
@@ -1362,6 +1398,7 @@ async function buildDrivePayload(type,id){
 }
 async function buildDrivePayload0(type,id){
   if(type==="movement")return moves.has(id)?{type,id}:{type,id,deleted:true};
+  if(type==="hsseplan")return plans.has(id)?{type,id}:{type,id,deleted:true};
   const month=d=>(d||new Date().toISOString()).slice(0,7);
   if(type==="audit"){
     const a=audits.get(id);if(!a||a.status!=="closed")return {type,id,deleted:true};
@@ -1407,11 +1444,11 @@ async function pullSync(){
     const since=(await devGet("sync-since"))||"";const first=!(await devGet("sync-pushed-v1"));
     const mine=first?{audit:[...audits.values()].filter(a=>a.status==="closed").map(a=>a.id),task:[...tasks.keys()],toolbox:[...tbs.keys()],production:[...pas.values()].filter(r=>r.status==="closed").map(r=>r.id)}:null;
     const j=await callServer(driveUrl,{type:"sync",token:session.token,since});
-    const maps={audit:[audits,"hsse-audits"],task:[tasks,"hsse-tasks"],toolbox:[tbs,"hsse-toolbox"],production:[pas,"hsse-production"],movement:[moves,"hsse-movement"]};
+    const maps={audit:[audits,"hsse-audits"],task:[tasks,"hsse-tasks"],toolbox:[tbs,"hsse-toolbox"],production:[pas,"hsse-production"],movement:[moves,"hsse-movement"],hsseplan:[plans,"hsse-plan"]};
     const touched=new Set();const q=await driveQueue();
     for(const it of j.items||[]){const m=maps[it.type];if(!m)continue;const map=m[0];const local=map.get(it.id);const k=it.type+"_"+it.id;
       if(q.some(x=>x.type===it.type&&x.id===it.id))continue; // a change made here is still waiting to upload: keep it
-      if(it.deleted){if(local&&(it.type==="task"||it.type==="toolbox"||it.type==="movement"||local.status==="closed")){map.delete(it.id);touched.add(it.type)}driveLog.delete(k);continue}
+      if(it.deleted){if(local&&(it.type==="task"||it.type==="toolbox"||it.type==="movement"||it.type==="hsseplan"||local.status==="closed")){map.delete(it.id);touched.add(it.type)}driveLog.delete(k);continue}
       const r=it.record;if(!r)continue;
       if(!local||(local.updatedAt||"")<(r.updatedAt||"")){map.set(it.id,r);touched.add(it.type)}
       driveLog.set(k,{at:it.updated,pdfUrl:it.pdfUrl||"",sheetUrl:it.sheetUrl||"",deleted:false});}
@@ -1420,7 +1457,7 @@ async function pullSync(){
     if(first){await devPut("sync-pushed-v1",true);const now=Date.now();const qq=await driveQueue();
       for(const [type,ids] of Object.entries(mine))for(const id of ids)if(!qq.some(x=>x.type===type&&x.id===id))qq.push({type,id,at:now});
       await driveQueueSet(qq);processDriveQueue()}
-    if(touched.size){if(view==="mv")renderMv();else if(view==="list")keepFocus(renderList);else if(view==="tasks")keepFocus(renderTasks);else if(view==="tb")keepFocus(renderTb);else if(view==="pa")keepFocus(renderPa);else if(view==="dash")keepFocus(renderDash);
+    if(touched.size){if(view==="plan")renderPlan();else if(view==="mv")renderMv();else if(view==="list")keepFocus(renderList);else if(view==="tasks")keepFocus(renderTasks);else if(view==="tb")keepFocus(renderTb);else if(view==="pa")keepFocus(renderPa);else if(view==="dash")keepFocus(renderDash);
       if(since)toast("New updates from your team")}
     refreshDriveChips();
   }catch(e){if(e&&e.code==="signed out"){session=null;await devPut("session",null);showLogin("Your sign-in has ended. Please sign in again – your records are safe on this device.")}}
@@ -1810,11 +1847,117 @@ async function importMvExcel(file){
   confirmBox(`Import ${found.length} week${found.length>1?"s":""}?`,`${found.map(w=>fmtD(w.id)).join(", ")}${over?`<br><br>${over} week${over>1?"s are":" is"} already planned and will be replaced.`:""}`,"Import",async()=>{
     try{for(const w of found)await saveMv(w);mvWeek=found.map(w=>w.id).sort().find(id=>id>=ymd(mondayOf(new Date())))||found[0].id;renderMv();toast(`Imported ${found.length} week${found.length>1?"s":""}`)}catch(e){toast("Not saved – check connection")}});
 }
-/* ============ HSSE PLAN (placeholder) ============ */
+/* ============ HSSE PLAN (annual plan: plan vs actual per month) ============ */
+// One record per year (id "2026"). Everyone can view; only the movement/plan editors (Shaiful) can change it.
+// Until the first edit is saved, the 2026 plan comes from hsse-plan-2026.json, built from "HSSE Plan 2026.pdf".
+const PL_M=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+let plans=new Map(), plLoaded=false, plYear=String(new Date().getFullYear()), plSeed=null, plSeedTried=false;
+function subscribePl(){db.collection("hsseplan").onSnapshot(snap=>{const m=new Map();snap.docs.forEach(d=>{if(d.exists){const v=d.data();m.set(v.id,v)}});plans=m;plLoaded=true;if(view==="plan")keepFocus(renderPlan)},()=>{plLoaded=true;if(view==="plan")renderPlan()})}
+async function loadPlSeed(){if(plSeedTried)return;plSeedTried=true;try{const r=await fetch("hsse-plan-2026.json",{cache:"no-store"});if(r.ok)plSeed=await r.json()}catch(e){}if(view==="plan")renderPlan()}
+function plDoc(){const d=plans.get(plYear);if(d)return d;if(plYear==="2026"&&plSeed)return plSeed;return null}
+async function savePl(d){d.updatedAt=new Date().toISOString();d.updatedBy=driveAvail()?(session?.name||""):"";plans.set(d.id,d);
+  if(mode==="shared")await db.collection("hsseplan").doc(d.id).set(d);else{await IDB.set("hsse-plan",[...plans.values()]);driveSend("hsseplan",d.id)}}
+function plStats(d){const items=d.sections.flatMap(s=>s.items);const counted=items.filter(i=>i.pct!=null&&i.pct!==""&&!/^NO REQ/i.test(i.remark||""));
+  const avg=counted.length?counted.reduce((t,i)=>t+Number(i.pct),0)/counted.length:null;
+  const now=new Date();const curM=String(now.getFullYear())===String(d.year)?now.getMonth():(Number(d.year)<now.getFullYear()?11:-1);
+  let planned=0,done=0,missed=0;items.forEach(i=>i.plan.forEach((p,m)=>{if(p&&m<=curM){planned++;if(i.actual[m]==="done")done++}if(i.actual[m]==="missed")missed++}));
+  return {items,avg,complete:items.filter(i=>Number(i.pct)>=100).length,going:items.filter(i=>i.pct>0&&i.pct<100).length,notStarted:items.filter(i=>!Number(i.pct)&&!/^NO REQ/i.test(i.remark||"")).length,planned,done,missed,curM};
+}
+function plCell(i,m,edit,curM){const p=i.plan[m],a=i.actual[m],n=i.notes[m]||"";
+  return `<td class="pl-m ${p?"pl-p":""} ${a?"pl-"+a:""} ${m===curM?"pl-cur":""}" ${edit?`data-plc="${i.id}:${m}" tabindex="0" role="button"`:""} title="${esc(PL_M[m])}: ${p?"planned":"not planned"}${a?" · "+(a==="done"?"done":"not done"):""}${n?" · "+esc(n):""}">${n?`<span class="pl-note">${esc(n)}</span>`:""}</td>`}
+function plTable(d,edit){const curM=plStats(d).curM;
+  return `<div class="pl-scroll"><table class="pl">
+   <thead><tr><th class="pl-no">No.</th><th class="pl-act">Action plan</th><th>Frequency</th><th class="pl-pa"></th>${PL_M.map((m,i)=>`<th class="${i===curM?"pl-cur":""}">${m}</th>`).join("")}<th>Status</th><th>Remark</th></tr></thead>
+   ${d.sections.map((s,si)=>`<tbody><tr class="pl-sec"><th colspan="${18}"><div class="pl-sec-t" ${edit?`data-pls="${si}" tabindex="0" role="button"`:""}>${esc(s.title)}</div>${s.objective?`<div class="pl-obj">${esc(s.objective)}</div>`:""}</th></tr>
+     ${s.items.map(i=>`<tr class="pl-r1"><td class="pl-no" rowspan="2">${esc(i.no)}</td><td class="pl-act" rowspan="2" ${edit?`data-pli="${i.id}" tabindex="0" role="button"`:""}>${esc(i.action)}</td><td class="pl-f" rowspan="2">${esc(i.freq)}</td><td class="pl-pa">Plan</td>${i.plan.map((_,m)=>plCell(i,m,edit,curM).replace('class="pl-m','class="pl-m pl-row-p')).join("")}
+        <td class="pl-st" rowspan="2"><b>${i.pct==null||i.pct===""?"–":Math.round(i.pct)+"%"}</b><div class="pl-bar"><i style="width:${Math.min(100,Number(i.pct)||0)}%"></i></div></td><td class="pl-rm ${Number(i.pct)>=100?"pl-ok":""}" rowspan="2">${esc(i.remark||"")}</td></tr>
+       <tr class="pl-r2"><td class="pl-pa">Actual</td>${i.actual.map((_,m)=>plCell(i,m,edit,curM).replace('class="pl-m','class="pl-m pl-row-a')).join("")}</tr>`).join("")}
+     ${edit?`<tr><td colspan="18"><button class="small-btn" data-pladd="${si}">+ Add action plan to ${esc(s.title)}</button></td></tr>`:""}</tbody>`).join("")}
+  </table></div>`;
+}
+function plCards(d,edit){const curM=plStats(d).curM;
+  return `<div class="pl-cards">${d.sections.map((s,si)=>`<section class="card pl-cs"><div class="pl-cs-h" ${edit?`data-pls="${si}" tabindex="0" role="button"`:""}><b>${esc(s.title)}</b>${s.objective?`<span>${esc(s.objective)}</span>`:""}</div>
+    ${s.items.map(i=>`<div class="pl-ci"><div class="pl-ci-t" ${edit?`data-pli="${i.id}" tabindex="0" role="button"`:""}><span class="mono muted">${esc(i.no)}</span> ${esc(i.action)}</div>
+      <div class="pl-ci-m"><span>${esc(i.freq)}</span><span class="pl-ci-pct">${i.pct==null||i.pct===""?"–":Math.round(i.pct)+"%"}</span><span class="${Number(i.pct)>=100?"pl-okt":""}">${esc(i.remark||"")}</span></div>
+      <div class="pl-strip"><div class="pl-sl"></div>${PL_M.map((m,k)=>`<div class="pl-sh ${k===curM?"pl-curh":""}">${m[0]}</div>`).join("")}
+        <div class="pl-sl">P</div>${i.plan.map((_,m)=>`<div class="pl-sq ${i.plan[m]?"pl-p":""}" ${edit?`data-plc="${i.id}:${m}" role="button" tabindex="0"`:""}></div>`).join("")}
+        <div class="pl-sl">A</div>${i.actual.map((a,m)=>`<div class="pl-sq ${a?"pl-"+a:""}" ${edit?`data-plc="${i.id}:${m}" role="button" tabindex="0"`:""} title="${esc(i.notes[m]||"")}"></div>`).join("")}</div>
+      ${i.notes.some(Boolean)?`<div class="pl-ci-n">${i.notes.map((n,m)=>n?`${PL_M[m]}: ${esc(n)}`:"").filter(Boolean).join(" · ")}</div>`:""}</div>`).join("")}
+    ${edit?`<div class="q-tools" style="padding:8px 12px"><button class="small-btn" data-pladd="${si}">+ Add action plan</button></div>`:""}</section>`).join("")}</div>`;
+}
+function plLegend(){return `<div class="mv-legend"><span><i class="pl-p"></i>Planned</span><span><i class="pl-done"></i>Done (actual)</span><span><i class="pl-missed"></i>Not done</span></div>`}
 function renderPlan(){
   if(view!=="plan")return;
-  $("#app").innerHTML=`<div><h1>HSSE Plan</h1></div>
-   <section class="card uc"><div class="uc-stripe" aria-hidden="true"></div><div class="uc-body"><div class="uc-word">UNDER CONSTRUCTION</div><p class="muted">This feature is coming soon.</p></div><div class="uc-stripe" aria-hidden="true"></div></section>`;
+  if(!plSeedTried)loadPlSeed();
+  const d=plDoc();const ed=canEditMove();
+  const years=[...new Set([...plans.keys(),"2026",plYear])].sort();
+  if(!d){$("#app").innerHTML=`<div class="rep-head"><div><h1>HSSE Plan ${esc(plYear)}</h1></div></div>
+    <div class="toolbar"><select id="plY" aria-label="Year">${years.map(y=>`<option ${y===plYear?"selected":""}>${y}</option>`).join("")}</select></div>
+    <div class="empty">${!plLoaded&&!plSeedTried?"Loading the HSSE Plan…":`No HSSE Plan for ${esc(plYear)} yet.`}${ed&&plLoaded?`<div class="toolbar" style="justify-content:center;margin-top:12px"><button class="btn brand" id="plNew">Start ${esc(plYear)} plan from the previous year</button></div>`:""}</div>`;
+    $("#plY").onchange=e=>{plYear=e.target.value;renderPlan()};
+    if($("#plNew"))$("#plNew").onclick=async()=>{const prev=[...plans.values(),...(plSeed?[plSeed]:[])].filter(x=>x.id<plYear).sort((a,b)=>b.id.localeCompare(a.id))[0];if(!prev){toast("No earlier plan to copy");return}
+      const nd=JSON.parse(JSON.stringify(prev));nd.id=plYear;nd.year=Number(plYear);nd.title=prev.title.replace(/\d{4}/,plYear);nd.attachments=[];nd.createdAt=new Date().toISOString();
+      nd.sections.forEach(s=>s.items.forEach(i=>{i.actual=Array(12).fill("");i.notes=Array(12).fill("");i.pct=0;i.remark="";const f=String(i.freq).toUpperCase();i.plan=(f==="MONTHLY"||f==="WEEKLY")?Array(12).fill(true):i.plan.slice()}));
+      await savePl(nd);renderPlan();toast(`${plYear} plan started`)};
+    return}
+  const st=plStats(d);
+  $("#app").innerHTML=`
+   <div class="rep-head"><div><h1>${esc(d.title||"HSSE Plan "+d.id)}</h1><div class="muted">Plan and actual by month${d.updatedBy?` · updated ${esc(fmtDT(d.updatedAt))} by ${esc(d.updatedBy)}`:""}</div></div>
+     <div class="toolbar"><select id="plY" aria-label="Year">${years.map(y=>`<option ${y===plYear?"selected":""}>${y}</option>`).join("")}</select><button class="btn" id="plPdf">Download PDF</button></div></div>
+   <section class="card pl-att"><div class="card-h"><h2>Attachments</h2>${ed?`<button class="small-btn pl-att-add" id="plAttAdd">+ Add file</button>`:""}</div><div class="card-b" style="padding-top:10px">
+     ${(d.attachments||[]).length?`<ul class="pl-files">${d.attachments.map((a,k)=>`<li><span class="pl-fi" aria-hidden="true">PDF</span><a href="${a.k==="static"?esc(a.path):a.k==="a"?"/_blob/"+esc(a.id):"#"}" ${a.k==="g"?`data-plopen="${k}"`:""} target="_blank" rel="noopener">${esc(a.name)}</a>${a.at?`<span class="muted" style="font-size:12px">${esc(fmtD(a.at.slice(0,10)))}</span>`:""}${ed?`<button class="small-btn" data-plrm="${k}" aria-label="Remove ${esc(a.name)}">Remove</button>`:""}</li>`).join("")}</ul>`:`<div class="muted">No attachments.</div>`}
+   </div></section>
+   <div class="tiles">
+     <div class="tile"><div class="k">Overall achieved</div><div class="v">${st.avg==null?"–":st.avg.toFixed(1)+"%"}</div></div>
+     <div class="tile"><div class="k">Complete</div><div class="v" style="color:var(--ok)">${st.complete}</div></div>
+     <div class="tile"><div class="k">On going</div><div class="v">${st.going}</div></div>
+     <div class="tile"><div class="k">Not done (months)</div><div class="v" style="color:${st.missed?"var(--bad)":"inherit"}">${st.missed}</div></div>
+   </div>
+   <div class="muted" style="font-size:13px">${st.items.length} action plans · ${st.done} of ${st.planned} planned activities done up to ${PL_M[Math.max(0,st.curM)]} · Overall achieved = average status of all action plans (excluding "No req").</div>
+   ${plLegend()}
+   <section class="card pl-card">${plTable(d,ed)}</section>${plCards(d,ed)}
+   ${ed?`<div class="muted" style="font-size:13px">Tap a month to set plan and actual. Tap an action plan to change its name, frequency, status % or remark. Tap a section title to edit its objective.</div>`:`<div class="muted" style="font-size:13px">Only the HSSE manager can change this plan.</div>`}
+   <input type="file" id="plFile" accept=".pdf,.xlsx,.xls,.doc,.docx,image/*" hidden>`;
+  $("#plY").onchange=e=>{plYear=e.target.value;renderPlan()};
+  $("#plPdf").onclick=()=>makePdf({btn:$("#plPdf"),brand:"HSSE Plan",title:d.title||"HSSE Plan "+d.id,sub:`Overall achieved ${st.avg==null?"–":st.avg.toFixed(1)+"%"} · ${st.items.length} action plans`,
+    body:`<section class="card" style="padding:10px 14px">${plLegend()}</section><section class="card pl-card">${plTable(d,false)}</section>`,footer:d.title||"HSSE Plan",filename:`HSSE-Plan-${d.id}.pdf`,orientation:"landscape"});
+  document.querySelectorAll("[data-plopen]").forEach(a=>a.onclick=async e=>{e.preventDefault();const f=d.attachments[+a.dataset.plopen];toast("Opening file…");
+    try{const j=await callServer(driveUrl,{type:"photo",token:session.token,id:f.id});const bin=atob(j.data);const u=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i);
+      const url=URL.createObjectURL(new Blob([u],{type:j.type||f.type||"application/pdf"}));const w=window.open(url,"_blank");if(!w){const l=document.createElement("a");l.href=url;l.download=f.name;l.click()}}catch(x){toast("Could not open the file – check your connection")}});
+  if(!ed)return;
+  const editable=()=>{if(plans.has(d.id))return d;const c=JSON.parse(JSON.stringify(d));plans.set(c.id,c);return c};
+  const save=async(doc)=>{try{await savePl(doc);renderPlan()}catch(e){toast("Not saved – check connection")}};
+  const findItem=(doc,id)=>{for(const s of doc.sections){const i=s.items.find(x=>x.id===id);if(i)return {s,i}}return null};
+  const bind=(sel,fn)=>document.querySelectorAll(sel).forEach(el=>{el.onclick=()=>fn(el);el.onkeydown=e=>{if(e.key==="Enter")fn(el)}});
+  bind("[data-plc]",el=>{const [id,m]=el.dataset.plc.split(":");const doc=editable();const {i}=findItem(doc,id);const k=+m;let p=!!i.plan[k],a=i.actual[k]||"";
+    mvModal(`${i.action.length>60?i.action.slice(0,58)+"…":i.action} · ${PL_M[k]} ${doc.id}`,`
+      <div class="fld"><span class="lbl">Plan</span><div class="mv-kinds" id="plP"><button class="chipbtn" data-v="1" aria-pressed="${p}">Planned</button><button class="chipbtn" data-v="0" aria-pressed="${!p}">Not planned</button></div></div>
+      <div class="fld"><span class="lbl">Actual</span><div class="mv-kinds" id="plA"><button class="chipbtn pl-done" data-v="done" aria-pressed="${a==="done"}">Done</button><button class="chipbtn pl-missed" data-v="missed" aria-pressed="${a==="missed"}">Not done</button><button class="chipbtn" data-v="" aria-pressed="${!a}">Not yet</button></div></div>
+      <div class="fld"><label for="plN">Note (optional)</label><input id="plN" value="${esc(i.notes[k]||"")}" placeholder="e.g. BA8 & BA6"></div>`,()=>{i.plan[k]=p;i.actual[k]=a;i.notes[k]=$("#plN").value.trim();save(doc)});
+    document.querySelectorAll("#plP [data-v]").forEach(b=>b.onclick=()=>{p=b.dataset.v==="1";document.querySelectorAll("#plP [data-v]").forEach(x=>x.setAttribute("aria-pressed",String(x===b)))});
+    document.querySelectorAll("#plA [data-v]").forEach(b=>b.onclick=()=>{a=b.dataset.v;if(a&&!p){p=true;document.querySelectorAll("#plP [data-v]").forEach(x=>x.setAttribute("aria-pressed",String(x.dataset.v==="1")))}document.querySelectorAll("#plA [data-v]").forEach(x=>x.setAttribute("aria-pressed",String(x===b)))});
+  });
+  const itemForm=(i,isNew)=>`<div class="fld"><label for="plIa">Action plan</label><textarea id="plIa" rows="2">${esc(i.action)}</textarea></div>
+      <div class="grid2" style="padding:0"><div class="fld"><label for="plIn">No.</label><input id="plIn" value="${esc(i.no)}"></div><div class="fld"><label for="plIf">Frequency</label><input id="plIf" list="dlPlF" value="${esc(i.freq)}"></div>
+      <div class="fld"><label for="plIp">Status %</label><input id="plIp" type="number" min="0" max="100" inputmode="numeric" value="${i.pct==null?"":esc(i.pct)}"></div><div class="fld"><label for="plIr">Remark</label><input id="plIr" value="${esc(i.remark||"")}" placeholder="e.g. ON GOING"></div></div>
+      <datalist id="dlPlF">${["MONTHLY","WEEKLY","QUARTER","TWICE PER YEAR","EVERY 2 MONTH","EVERY 6 MONTH","YEARLY","2 YEARS","5 YEARS","BASED ON REQUEST","BASED ON PROGRAM"].map(x=>`<option value="${x}">`).join("")}</datalist>
+      ${isNew?"":`<div class="q-tools"><button class="small-btn" id="plIdel" style="color:var(--bad)">Delete this action plan</button></div>`}`;
+  const readItem=i=>{const a=$("#plIa").value.trim();if(!a){toast("Type the action plan");return false}i.action=a;i.no=$("#plIn").value.trim();i.freq=$("#plIf").value.trim().toUpperCase();const pv=$("#plIp").value;i.pct=pv===""?null:Math.max(0,Math.min(100,Number(pv)));i.remark=$("#plIr").value.trim().toUpperCase();return true};
+  bind("[data-pli]",el=>{const doc=editable();const {s,i}=findItem(doc,el.dataset.pli);
+    mvModal("Edit action plan",itemForm(i,false),()=>{if(readItem(i)===false)return false;save(doc)});
+    $("#plIdel").onclick=()=>{$("#modal").hidden=true;confirmBox("Delete this action plan?",esc(i.action),"Delete",()=>{s.items.splice(s.items.indexOf(i),1);save(doc)})}});
+  bind("[data-pladd]",el=>{const doc=editable();const s=doc.sections[+el.dataset.pladd];const i={id:"a"+uid(),no:String(s.items.length+1),action:"",freq:"MONTHLY",plan:Array(12).fill(false),actual:Array(12).fill(""),notes:Array(12).fill(""),pct:0,remark:""};
+    mvModal(`Add action plan · ${s.title}`,itemForm(i,true),()=>{if(readItem(i)===false)return false;if(i.freq==="MONTHLY"||i.freq==="WEEKLY")i.plan=Array(12).fill(true);s.items.push(i);save(doc)})});
+  bind("[data-pls]",el=>{const doc=editable();const s=doc.sections[+el.dataset.pls];
+    mvModal("Edit section",`<div class="fld"><label for="plSt">Section</label><input id="plSt" value="${esc(s.title)}"></div><div class="fld"><label for="plSo">Objective</label><textarea id="plSo" rows="3">${esc(s.objective||"")}</textarea></div>`,()=>{const t=$("#plSt").value.trim();if(!t){toast("Type the section name");return false}s.title=t.toUpperCase();s.objective=$("#plSo").value.trim();save(doc)})});
+  document.querySelectorAll("[data-plrm]").forEach(b=>b.onclick=()=>{const doc=editable();const f=doc.attachments[+b.dataset.plrm];confirmBox(`Remove ${f.name}?`,"The file is removed from the HSSE Plan for everyone.","Delete",()=>{doc.attachments.splice(+b.dataset.plrm,1);save(doc)})});
+  $("#plAttAdd").onclick=()=>{const inp=$("#plFile");inp.value="";inp.onchange=async()=>{const f=inp.files[0];if(!f)return;if(f.size>15*1024*1024){toast("The file is too big (max 15 MB)");return}
+    toast("Uploading file…");const doc=editable();
+    try{let att;
+      if(driveAvail()){const data=await blobToB64(f);const j=await callServer(driveUrl,{type:"attach",token:session.token,name:f.name,mime:f.type||"application/octet-stream",data});att={name:f.name,k:"g",id:j.id,type:f.type,at:new Date().toISOString()}}
+      else if(assets){const r=await assets.upload(f,f.type?undefined:{type:"application/pdf"});att={name:f.name,k:"a",id:r.id,type:f.type,at:new Date().toISOString()}}
+      else{toast("Uploading files is not available here");return}
+      (doc.attachments=doc.attachments||[]).push(att);await save(doc);toast("File added")}catch(e){toast(e.message||"Could not upload the file")}};inp.click()};
 }
 /* ============ DASHBOARD ============ */
 let dashF={range:"90",from:"",to:"",who:""};

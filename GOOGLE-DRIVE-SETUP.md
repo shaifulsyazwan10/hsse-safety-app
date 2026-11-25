@@ -5,7 +5,7 @@ The app at https://shaifulsyazwan10.github.io/hsse-safety-app/ uses one small Go
 1. **Sign-in** – each team member signs in with an email and password that you manage in the **Users** tab of a Google Sheet.
 2. **Google Drive copy** – every submitted site audit, saved task and saved toolbox meeting is saved in that account's Drive:
 
-3. **Sync between phones and computers** – every saved task, toolbox meeting, submitted site audit and submitted production audit is also stored in the hidden **Data** tab, so every device that signs in sees the same records (photos are read back from Drive). Drafts stay on the device where they were started. The weekly **Movement planning** syncs the same way; only the accounts in `MOVEMENT_EDITORS` (at the top of the script, Shaiful by default) can change it — the script refuses changes from anyone else.
+3. **Sync between phones and computers** – every saved task, toolbox meeting, submitted site audit and submitted production audit is also stored in the hidden **Data** tab, so every device that signs in sees the same records (photos are read back from Drive). Drafts stay on the device where they were started. The weekly **Movement planning** and the annual **HSSE Plan** sync the same way; only the accounts in `MOVEMENT_EDITORS` (at the top of the script, Shaiful by default) can change it — the script refuses changes from anyone else.
 4. **Task emails** – Monday to Friday at about 8:30 AM (Malaysia time) one *HSSE Task Update* email goes to everyone marked Active in **Users** (overdue tasks, due within 2 days, all open tasks, completed since the last update, open/overdue per person). When Shaiful creates a task for someone else, that person is emailed straight away. Emails are sent from the Google account that owns the script. To test, run **sendTaskDigestNow** in the script.
 5. **Daily news** – every day at 6 AM (Malaysia time) the script collects the latest DOSH / JKKP, DOE / JAS, workplace-accident and safety & health news in Malaysia from Google News (English and Malay) into the **News** tab. The dashboard shows it under **Safety & Health News**.
 
@@ -16,6 +16,7 @@ My Drive/
     ├── Site Audits/2026-11/2026-11-20 PS Karak/          ← PDF report + all photos
     ├── Toolbox Meetings/2026-11/2026-11-20 0800 Bay 2/   ← PDF + briefing photos
     ├── Production Audits/2026-11/2026-11-20 Line 2/      ← PDF + item photos
+    ├── HSSE Plan/                                        ← files Shaiful adds to the HSSE Plan
     └── Task Updates/                                     ← (tasks are rows in the sheet)
 ```
 

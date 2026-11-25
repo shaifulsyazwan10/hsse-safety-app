@@ -35,7 +35,7 @@ const START_USERS = [
   ['hsse10@octagonmaju.com.my', 'Ridzuan']
 ];
 const SESSION_DAYS = 30;
-const MOVEMENT_EDITORS = ['shaifulsyazwan@octagonmaju.com.my']; // who can change the Movement planning
+const MOVEMENT_EDITORS = ['shaifulsyazwan@octagonmaju.com.my']; // who can change the Movement planning and the HSSE Plan
 const TASK_NOTIFY_FROM = ['shaifulsyazwan@octagonmaju.com.my'];  // new tasks created by these accounts are emailed to the person assigned
 const APP_URL = 'https://shaifulsyazwan10.github.io/hsse-safety-app/';
 const TZ = 'Asia/Kuala_Lumpur';
@@ -78,12 +78,18 @@ function doPost(e) {
     if (p.type === 'news') { lock.waitLock(60000); locked = true; return out_(news_(!!p.force)); }
     const root = root_();
     if (p.type === 'ping') return out_({ ok: true, name: who.name, folderUrl: root.getUrl(), sheetUrl: ss.getUrl() });
-    if (p.type === 'movement') {
-      // weekly HSSE team movement planning: everyone can read it through sync, only these accounts can change it
-      if (MOVEMENT_EDITORS.indexOf(who.email) < 0) return out_({ ok: false, error: 'Only the HSSE manager can update the movement planning' });
+    if (p.type === 'movement' || p.type === 'hsseplan') {
+      // weekly movement planning and the annual HSSE Plan: everyone can read them through sync, only these accounts can change them
+      if (MOVEMENT_EDITORS.indexOf(who.email) < 0) return out_({ ok: false, error: 'Only the HSSE manager can update the ' + (p.type === 'movement' ? 'movement planning' : 'HSSE Plan') });
       lock.waitLock(60000); locked = true;
-      saveData_(ss, 'movement', String(p.id), !!p.deleted, p.deleted ? null : (p.record || null), '', '');
+      saveData_(ss, p.type, String(p.id), !!p.deleted, p.deleted ? null : (p.record || null), '', '');
       return out_({ ok: true });
+    }
+    if (p.type === 'attach') {
+      // HSSE Plan attachment uploaded by the HSSE manager; read back through {type:'photo', id}
+      if (MOVEMENT_EDITORS.indexOf(who.email) < 0) return out_({ ok: false, error: 'Only the HSSE manager can add files to the HSSE Plan' });
+      const f = child_(root_(), 'HSSE Plan').createFile(Utilities.newBlob(Utilities.base64Decode(p.data), p.mime || 'application/octet-stream', clean_(p.name)));
+      return out_({ ok: true, id: f.getId(), url: f.getUrl() });
     }
     if (!TYPES[p.type] || !p.id) return out_({ ok: false, error: 'bad request' });
 

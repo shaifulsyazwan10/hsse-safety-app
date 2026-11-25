@@ -66,9 +66,13 @@ The user chose **no Firebase**. On the GitHub address each device keeps its own 
 - claude.ai's CSP blocks script.google.com, so none of this runs in the artifact (the artifact uses its own shared db, no sign-in).
 - Tests: `scripts/gas-mock.js` runs Code.gs on in-memory Drive/Sheets (`/admin?email=&v=&col=` sets a Users cell); `scripts/drive-test.js` (22 checks) and `scripts/standalone-test.js` drive the app against it with `window.HSSE_DRIVE_TEST=true`.
 
-## HSSE Plan (placeholder)
+## HSSE Plan (annual, plan vs actual)
 
-Tab **HSSE Plan** (`plan`, third tab, between Movement planning and Site audits) currently shows only a big **UNDER CONSTRUCTION** banner with hazard-stripe bars (`renderPlan`, `.uc*` CSS). Replace `renderPlan()` when the user describes the feature.
+Tab **HSSE Plan** (`plan`, between Movement planning and Site audits), from the user's "OM Annual HSSE Plan 2026 – Updated Status Plan" PDF. One record per year in collection `hsseplan` (id "2026"): `{id, year, title, sections:[{title, objective, items:[{id, no, action, freq, plan:[12 bool], actual:[12 ''|'done'|'missed'], notes:[12 str], pct, remark}]}], attachments:[{name, k:'static'|'g'|'a', path|id, type, at}], updatedAt, updatedBy}`.
+- Seed: `docs/hsse-plan-2026.json` (also `assets/plan/`): 48 action plans in 10 sections; actual = PDF cell colours (green done / red not done, read by pixel sampling); plan = every month for MONTHLY/WEEKLY, months with a mark, plus "PLANNING ON <MONTH>" remarks; cell labels ("UEM", "BA8 & BA6", "Shoe rack", …) kept as notes. Used until the first saved edit (`plDoc()` falls back to `plSeed`). Original PDF attached as `attachments/HSSE_Plan_2026.pdf` (in `docs/` and as an artifact file). The user agreed to push the PDF and plan data to GitHub.
+- View: table with Plan and Actual rows per action (planned light blue, done green, not done red, current month marked), Status % with bar, Remark; phone shows cards with a 12-month P/A strip. Tiles: Overall achieved = average Status % excluding "NO REQ" and blanks (46.9% on the PDF data; the PDF's own 48.30% cannot be reproduced from its column), Complete, On going, Not done (months). Download PDF = A4 landscape.
+- Edit (Shaiful only — same `MOVEMENT_EDITORS` / owner rule; Code.gs refuses others; claude.ai db rule `{path:"hsseplan", write:"owner"}`): tap a month (Planned / Not planned, Done / Not done / Not yet, note), tap an action (name, no., frequency, status %, remark, delete), tap a section (title, objective), + Add action plan, + Add file (GitHub: `{type:"attach"}` → Drive "HSSE Safety/HSSE Plan", opened via `{type:"photo", id}`; claude.ai: assets), Remove file, "Start <year> plan from the previous year".
+- Test: `scripts/plan-test.js`.
 
 ## Movement planning (weekly)
 
